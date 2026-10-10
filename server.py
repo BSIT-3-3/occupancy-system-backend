@@ -1,14 +1,18 @@
-from fastapi import FastAPI
 
-app = FastAPI(
-    title="Room Monitoring Backend",
-    version="1.0.0",
-)
+from flask import Flask
 
-@app.get("/")
+app = Flask(__name__)
+
+
+@app.route("/", methods=["GET"])
 def root():
     return {"message": "Room Monitoring Backend"}
 
-@app.get("/health")
+
+@app.route("/health", methods=["GET"])
 def health():
     return {"status": "ok"}
+
+
+if __name__ == "__main__":
+    app.run(debug=True)
