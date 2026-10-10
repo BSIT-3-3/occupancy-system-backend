@@ -1,9 +1,6 @@
-from fastapi import FastAPI
+from database import create_app
 
-app = FastAPI(
-    title="Room Monitoring Backend",
-    version="1.0.0",
-)
+app = create_app()
 
 @app.get("/")
 def root():
@@ -12,3 +9,6 @@ def root():
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+if __name__ == "__main__":
+    app.run(debug=True)
