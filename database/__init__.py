@@ -2,23 +2,35 @@ import os
 from dotenv import load_dotenv
 from flask import Flask
 from database.extensions import db, migrate
-
-load_dotenv()
+from sqlalchemy import URL
 
 def create_app():
+    
+    load_dotenv(override=True)
     app = Flask(__name__)
 
-    app.config["SQLALCHEMY_DATABASE_URI"] = (
-        f"postgresql+psycopg://"
-        f"{os.getenv('DB_USER')}:"
-        f"{os.getenv('DB_PASSWORD')}@"
-        f"{os.getenv('DB_HOST')}:"
-        f"{os.getenv('DB_PORT')}/"
-        f"{os.getenv('DB_NAME')}"
+    database_url = URL.create(
+        drivername="postgresql+psycopg",
+        username=os.getenv("DB_USER", "").strip(),
+        password=os.getenv("DB_PASSWORD", ""),
+        host=os.getenv("DB_HOST", "").strip(),
+        port=int(os.getenv("DB_PORT", "5432").strip()),
+        database=os.getenv("DB_NAME", "").strip(),
     )
+
+    app.config["SQLALCHEMY_DATABASE_URI"] = database_url
 
     db.init_app(app)
     migrate.init_app(app, db)
 
-    return app
+    from database.models import (
+        assistance_request,
+        occupancy_event,
+        profile,
+        role,
+        room,
+        room_device,
+        user,
+    )
 
+    return app
