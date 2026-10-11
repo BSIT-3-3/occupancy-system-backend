@@ -6,22 +6,6 @@ from db import Base, Session, engine
 
 app = Flask(__name__)
 
-
-class Role(Base):
-    __tablename__ = "role"
-
-    role_id = Column(Integer, primary_key=True)
-    role_name = Column(String(50), nullable=False)
-    description = Column(String(25))
-
-    def to_dict(self):
-        return {
-            "role_id": self.role_id,
-            "role_name": self.role_name,
-            "description": self.description,
-        }
-
-
 # CREATE
 @app.post("/roles")
 def create_role():
