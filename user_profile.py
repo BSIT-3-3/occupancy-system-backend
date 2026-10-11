@@ -6,33 +6,6 @@ from user import User  # needed so the user table exists for the foreign key
 
 app = Flask(__name__)
 
-
-class UserProfile(Base):
-    __tablename__ = "user_profile"
-
-    # one profile per user: user_id is both primary key and foreign key
-    user_id = Column(
-        Integer, ForeignKey("user.user_id", ondelete="CASCADE"), primary_key=True
-    )
-    first_name = Column(String(50), nullable=False)
-    middle_name = Column(String(50))
-    last_name = Column(String(50), nullable=False)
-    contact_number = Column(String(20))
-    updated_at = Column(
-        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
-    )
-
-    def to_dict(self):
-        return {
-            "user_id": self.user_id,
-            "first_name": self.first_name,
-            "middle_name": self.middle_name,
-            "last_name": self.last_name,
-            "contact_number": self.contact_number,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
-        }
-
-
 # CREATE
 @app.post("/user_profiles")
 def create_profile():
