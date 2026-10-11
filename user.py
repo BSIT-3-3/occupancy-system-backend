@@ -7,29 +7,6 @@ from role import Role  # needed so the role table exists for the foreign key
 
 app = Flask(__name__)
 
-
-class User(Base):
-    __tablename__ = "user"
-
-    user_id = Column(Integer, primary_key=True)
-    username = Column(String(50), unique=True, nullable=False)
-    password = Column(String(255), nullable=False)
-    full_name = Column(String(100))
-    role_id = Column(Integer, ForeignKey("role.role_id"), nullable=False)
-    status = Column(String(20), default="active")
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-
-    def to_dict(self):  # password is never returned
-        return {
-            "user_id": self.user_id,
-            "username": self.username,
-            "full_name": self.full_name,
-            "role_id": self.role_id,
-            "status": self.status,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-        }
-
-
 def username_taken(s, username, exclude_id=None):
     user = s.query(User).filter(User.username == username).first()
     return user is not None and user.user_id != exclude_id
