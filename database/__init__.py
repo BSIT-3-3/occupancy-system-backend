@@ -33,4 +33,7 @@ def create_app():
         user,
     )
 
+    from api.assistance.routes import assistance_bp
+    app.register_blueprint(assistance_bp)
+
     return app
