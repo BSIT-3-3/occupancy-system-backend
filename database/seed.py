@@ -4,22 +4,22 @@ from models import role, room, room_device
 def seed_data():
     # Seed Roles
     roles = [
-        Role(
+        role(
             role_name="ADMIN",
             description="System administrator"
         ),
-        Role(
+        role(
             role_name="STAFF",
             description="Staff member"
         ),
-        Role(
+        role(
             role_name="USER",
             description="Regular user"
         ),
     ]
 
     for role in roles:
-        existing = Role.query.filter_by(
+        existing = role.query.filter_by(
             role_name=role.role_name
         ).first()
 
