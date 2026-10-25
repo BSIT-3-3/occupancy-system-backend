@@ -1,12 +1,16 @@
+
 import os
+
 from dotenv import load_dotenv
 from flask import Flask
-from database.extensions import db, migrate
 from sqlalchemy import URL
 
+from database.extensions import db, migrate
+
+
 def create_app():
-    
     load_dotenv(override=True)
+
     app = Flask(__name__)
 
     database_url = URL.create(
@@ -35,5 +39,7 @@ def create_app():
 
     from api.assistance.routes import assistance_bp
     app.register_blueprint(assistance_bp)
+
+    # Register Occupancy Event API
 
     return app
