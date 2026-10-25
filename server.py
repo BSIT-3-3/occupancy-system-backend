@@ -1,17 +1,18 @@
 from database import create_app
 from flasgger import Swagger
 import api.authentication.routes as routes_bp
-from werkzeug.security import generate_password_hash
+import services.role.role as role_bp
+import services.authentication.user as users_bp
+import services.authentication.user_profile as users_profile_bp
 
 app = create_app()
 app.register_blueprint(routes_bp.auth_bp)
-
+app.register_blueprint(role_bp.roles_bp)
+app.register_blueprint(users_bp.users_bp)
+app.register_blueprint(users_profile_bp.profiles_bp)
 
 swagger = Swagger(app)
 
-
-hashed_password = generate_password_hash("Admin123!")
-print("here" +hashed_password)
 
 @app.get("/")
 def root():
