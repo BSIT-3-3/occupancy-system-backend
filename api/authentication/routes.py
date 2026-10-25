@@ -13,6 +13,66 @@ auth_bp = Blueprint(
 
 @auth_bp.post("/login")
 def login():
+    """
+    Authenticate a user.
+    ---
+    tags:
+      - Authentication
+    consumes:
+      - application/json
+    produces:
+      - application/json
+    parameters:
+      - in: body
+        name: body
+        required: true
+        description: User login credentials
+        schema:
+          type: object
+          required:
+            - username
+            - password
+          properties:
+            username:
+              type: string
+              example: admin
+            password:
+              type: string
+              example: Admin123!
+    responses:
+      200:
+        description: Login successful
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+              example: Login successful
+            user:
+              type: object
+              properties:
+                user_id:
+                  type: integer
+                  example: 1
+                username:
+                  type: string
+                  example: admin
+                full_name:
+                  type: string
+                  example: Juan Dela Cruz
+                role_id:
+                  type: integer
+                  example: 1
+                status:
+                  type: string
+                  example: ACTIVE
+      400:
+        description: Invalid request or missing credentials
+      401:
+        description: Invalid username or password
+      403:
+        description: Account is inactive
+    """
     if not request.is_json:
         return jsonify({
             "error": "Request must use JSON format"
