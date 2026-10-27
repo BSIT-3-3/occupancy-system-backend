@@ -1,4 +1,3 @@
-
 from flask import Blueprint, jsonify, request
 
 from database.extensions import db
@@ -15,6 +14,81 @@ occupancy_bp = Blueprint(
 
 @occupancy_bp.post("/events")
 def create_occupancy_event():
+    """
+    Record an occupancy event.
+    ---
+    tags:
+      - Occupancy
+    consumes:
+      - application/json
+    produces:
+      - application/json
+    parameters:
+      - in: body
+        name: body
+        required: true
+        description: Occupancy event details sent by a room device
+        schema:
+          type: object
+          required:
+            - room_id
+            - device_id
+            - event_type
+            - occupancy_status
+          properties:
+            room_id:
+              type: integer
+              example: 1
+            device_id:
+              type: string
+              example: ROOM-001-DEVICE
+            event_type:
+              type: string
+              example: MOTION_DETECTED
+            occupancy_status:
+              type: string
+              enum:
+                - AVAILABLE
+                - OCCUPIED
+              example: OCCUPIED
+    responses:
+      201:
+        description: Occupancy event recorded successfully
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+              example: Occupancy event recorded successfully
+            event:
+              type: object
+              properties:
+                occupancy_event_id:
+                  type: integer
+                  example: 1
+                room_id:
+                  type: integer
+                  example: 1
+                device_id:
+                  type: string
+                  example: ROOM-001-DEVICE
+                event_type:
+                  type: string
+                  example: MOTION_DETECTED
+                occupancy_status:
+                  type: string
+                  example: OCCUPIED
+                occurred_at:
+                  type: string
+                  format: date-time
+                  nullable: true
+      400:
+        description: Invalid JSON, missing fields, or invalid field values
+      404:
+        description: Room or room device not found
+      500:
+        description: Failed to save occupancy event
+    """
     if not request.is_json:
         return jsonify({"error": "Request must use JSON format"}), 400
 
