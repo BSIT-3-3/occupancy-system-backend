@@ -37,9 +37,4 @@ def create_app():
         user,
     )
 
-    # Register Occupancy Event API
-    from api.occupancy.routes import occupancy_bp
-
-    app.register_blueprint(occupancy_bp)
-
     return app

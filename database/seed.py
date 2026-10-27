@@ -1,18 +1,19 @@
 from database.extensions import db
-from models import role, room, room_device
-
+from database.models.role import Role
+from database.models.room import Room
+from database.models.room_device import RoomDevice
 def seed_data():
     # Seed Roles
     roles = [
-        role(
+        Role(
             role_name="ADMIN",
             description="System administrator"
         ),
-        role(
+        Role(
             role_name="STAFF",
             description="Staff member"
         ),
-        role(
+        Role(
             role_name="USER",
             description="Regular user"
         ),
@@ -137,7 +138,7 @@ def seed_data():
     ]
 
     for data in devices:
-        existing = Device.query.filter_by(
+        existing = RoomDevice.query.filter_by(
             device_id=data["device_id"]
         ).first()
 
@@ -147,7 +148,7 @@ def seed_data():
             ).first()
 
             if room:
-                device = Device(
+                device = RoomDevice(
                     device_id=data["device_id"],
                     room_id=room.room_id,
                     device_code=data["device_code"],
@@ -161,4 +162,7 @@ def seed_data():
 
 
 if __name__ == "__main__":
-    seed_data()
+    from server import app
+
+    with app.app_context():
+        seed_data()
