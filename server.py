@@ -15,7 +15,6 @@ app.register_blueprint(occupancy_route_bp.occupancy_bp)
 
 swagger = Swagger(app)
 
-
 @app.get("/")
 def root():
     """
