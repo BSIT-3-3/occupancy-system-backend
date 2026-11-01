@@ -32,5 +32,4 @@ jobs:
       - name: Run tests
         run: python -m pytest -v 
 
-      - name: Check Behavior
-        run: python -m pytest        
+
