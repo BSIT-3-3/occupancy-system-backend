@@ -31,5 +31,12 @@ jobs:
 
       - name: Run tests
         run: python -m pytest -v 
+        
+      - name: Check code quality
+        run: ruff check .
+        
+      - name: Check codebase formatting
+        run: ruff format --check .
+        
 
 
