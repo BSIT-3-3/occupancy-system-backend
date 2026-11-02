@@ -1,9 +1,9 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, jsonify, request
 from sqlalchemy.exc import IntegrityError
 
 from database import db
-from database.models.user import User
 from database.models.profile import UserProfile
+from database.models.user import User
 
 profiles_bp = Blueprint("user_profiles", __name__)
 
@@ -17,9 +17,7 @@ def create_profile():
         return jsonify({"error": "user_id does not exist"}), 400
 
     if db.session.get(UserProfile, data["user_id"]):
-        return jsonify({
-            "error": "Profile already exists for this user"
-        }), 409
+        return jsonify({"error": "Profile already exists for this user"}), 409
 
     profile = UserProfile(
         user_id=data["user_id"],
@@ -50,6 +48,7 @@ def get_profiles():
     """
     profiles = db.session.query(UserProfile).all()
     return jsonify([profile.to_dict() for profile in profiles])
+
 
 # READ ONE
 @profiles_bp.get("/user_profiles/<int:user_id>")

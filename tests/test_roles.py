@@ -1,6 +1,3 @@
-from server import app
-
-
 # def test_get_roles():
 #     client = app.test_client()
 

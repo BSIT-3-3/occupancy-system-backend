@@ -1,15 +1,12 @@
 from flask import Blueprint, jsonify, request
+from sqlalchemy.exc import SQLAlchemyError
 
 from database.extensions import db
+from database.models.occupancy_event import OccupancyEvent
 from database.models.room import Room
 from database.models.room_device import RoomDevice
-from database.models.occupancy_event import OccupancyEvent
 
-occupancy_bp = Blueprint(
-    "occupancy",
-    __name__,
-    url_prefix="/api/occupancy"
-)
+occupancy_bp = Blueprint("occupancy", __name__, url_prefix="/api/occupancy")
 
 
 @occupancy_bp.post("/events")
@@ -97,23 +94,18 @@ def create_occupancy_event():
     if not isinstance(data, dict):
         return jsonify({"error": "Invalid JSON request body"}), 400
 
-    required_fields = [
-        "room_id",
-        "device_id",
-        "event_type",
-        "occupancy_status"
-    ]
+    required_fields = ["room_id", "device_id", "event_type", "occupancy_status"]
 
     missing_fields = [
-        field for field in required_fields
+        field
+        for field in required_fields
         if field not in data or data[field] is None or data[field] == ""
     ]
 
     if missing_fields:
-        return jsonify({
-            "error": "Missing required fields",
-            "fields": missing_fields
-        }), 400
+        return jsonify(
+            {"error": "Missing required fields", "fields": missing_fields}
+        ), 400
 
     room_id = data["room_id"]
     device_id = data["device_id"]
@@ -135,10 +127,12 @@ def create_occupancy_event():
     occupancy_status = occupancy_status.strip().upper()
 
     if occupancy_status not in {"OCCUPIED", "AVAILABLE"}:
-        return jsonify({
-            "error": "Invalid occupancy_status",
-            "allowed_values": ["AVAILABLE", "OCCUPIED"]
-        }), 400
+        return jsonify(
+            {
+                "error": "Invalid occupancy_status",
+                "allowed_values": ["AVAILABLE", "OCCUPIED"],
+            }
+        ), 400
 
     room = db.session.get(Room, room_id)
 
@@ -152,35 +146,34 @@ def create_occupancy_event():
         return jsonify({"error": "Room device not found", "device_id": device_id}), 404
 
     if device.room_id != room.room_id:
-        return jsonify({
-            "error": "The device is not registered to this room"
-        }), 400
+        return jsonify({"error": "The device is not registered to this room"}), 400
 
     event = OccupancyEvent(
         room_id=room.room_id,
         device_id=device.device_id,
         event_type=event_type.strip(),
-        occupancy_status=occupancy_status
+        occupancy_status=occupancy_status,
     )
 
     try:
         db.session.add(event)
         db.session.commit()
-    except Exception:
+    except SQLAlchemyError:
         db.session.rollback()
         return jsonify({"error": "Failed to save occupancy event"}), 500
 
-    return jsonify({
-        "message": "Occupancy event recorded successfully",
-        "event": {
-            "occupancy_event_id": event.occupancy_event_id,
-            "room_id": event.room_id,
-            "device_id": event.device_id,
-            "event_type": event.event_type,
-            "occupancy_status": event.occupancy_status,
-            "occurred_at": (
-                event.occurred_at.isoformat()
-                if event.occurred_at else None
-            )
+    return jsonify(
+        {
+            "message": "Occupancy event recorded successfully",
+            "event": {
+                "occupancy_event_id": event.occupancy_event_id,
+                "room_id": event.room_id,
+                "device_id": event.device_id,
+                "event_type": event.event_type,
+                "occupancy_status": event.occupancy_status,
+                "occurred_at": (
+                    event.occurred_at.isoformat() if event.occurred_at else None
+                ),
+            },
         }
-    }), 201
+    ), 201

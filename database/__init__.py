@@ -27,13 +27,13 @@ def create_app():
     migrate.init_app(app, db)
 
     from database.models import (
-        assistance_request,
-        occupancy_event,
-        profile,
-        role,
-        room,
-        room_device,
-        user,
+        assistance_request,  # noqa: F401
+        occupancy_event,  # noqa: F401
+        profile,  # noqa: F401
+        role,  # noqa: F401
+        room,  # noqa: F401
+        room_device,  # noqa: F401
+        user,  # noqa: F401
     )
 
     return app

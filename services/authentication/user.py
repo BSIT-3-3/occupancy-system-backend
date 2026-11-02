@@ -1,18 +1,16 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, jsonify, request
 from sqlalchemy.exc import IntegrityError
 from werkzeug.security import generate_password_hash
 
 from database import db
-from database.models.user import User
 from database.models.role import Role
+from database.models.user import User
 
 users_bp = Blueprint("users", __name__)
 
 
 def username_taken(username, exclude_id=None):
-    query = db.session.query(User).filter(
-        User.username == username
-    )
+    query = db.session.query(User).filter(User.username == username)
 
     if exclude_id is not None:
         query = query.filter(User.user_id != exclude_id)

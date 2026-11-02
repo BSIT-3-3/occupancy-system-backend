@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, jsonify, request
 from sqlalchemy.exc import IntegrityError
 
 from database import db
@@ -11,11 +11,7 @@ roles_bp = Blueprint("roles", __name__)
 @roles_bp.post("/roles")
 def create_role():
     data = request.get_json()
-
-    role = Role(
-        role_name=data["role_name"],
-        description=data.get("description")
-    )
+    role = Role(role_name=data["role_name"], description=data.get("description"))
 
     db.session.add(role)
     db.session.commit()

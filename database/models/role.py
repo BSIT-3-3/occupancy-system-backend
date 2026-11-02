@@ -1,5 +1,5 @@
-
 from database.extensions import db
+
 
 class Role(db.Model):
     __tablename__ = "role"
