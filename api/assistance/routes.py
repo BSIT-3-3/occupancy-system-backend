@@ -1,6 +1,7 @@
 
 from flask import Blueprint, request, jsonify
 from sqlalchemy.exc import SQLAlchemyError
+from datetime import datetime, timezone
 
 from database.extensions import db
 from database.models.assistance_request import AssistanceRequest
@@ -116,6 +117,8 @@ def get_assistance_request(request_id):
 
 
 # UPDATE: Update request status, timestamps, or remarks
+
+# UPDATE: Move an assistance request through its workflow
 @assistance_bp.put("/assistance-requests/<int:request_id>")
 def update_assistance_request(request_id):
     data = request.get_json(silent=True)
@@ -123,7 +126,7 @@ def update_assistance_request(request_id):
     if not isinstance(data, dict):
         return jsonify({"error": "A JSON object is required"}), 400
 
-    allowed_fields = {"status", "acknowledged_at", "resolved_at", "remarks"}
+    allowed_fields = {"status", "remarks"}
     unknown_fields = set(data.keys()) - allowed_fields
 
     if unknown_fields:
@@ -137,53 +140,62 @@ def update_assistance_request(request_id):
 
     if "status" in data:
         if not isinstance(data["status"], str) or not data["status"].strip():
-            return jsonify({"error": "status must be a non-empty string"}), 400
+            return jsonify({
+                "error": "status must be a non-empty string"
+            }), 400
 
     if "remarks" in data:
         if data["remarks"] is not None and not isinstance(data["remarks"], str):
-            return jsonify({"error": "remarks must be a string or null"}), 400
+            return jsonify({
+                "error": "remarks must be a string or null"
+            }), 400
 
     try:
         item = db.session.get(AssistanceRequest, request_id)
 
         if item is None:
-            return jsonify({"error": "Assistance request not found"}), 404
+            return jsonify({
+                "error": "Assistance request not found"
+            }), 404
 
-        for field in ("status", "remarks"):
-            if field in data:
-                value = data[field]
-                setattr(item, field, value.strip() if field == "status" else value)
+        if "status" in data:
+            new_status = data["status"].strip().upper()
+            current_status = item.status.upper()
 
-        # Timestamps accept ISO 8601 strings or null.
-        for field in ("acknowledged_at", "resolved_at"):
-            if field in data:
-                value = data[field]
+            allowed_transitions = {
+                "PENDING": "ACKNOWLEDGED",
+                "ACKNOWLEDGED": "RESOLVED",
+            }
 
-                if value is None:
-                    setattr(item, field, None)
-                    continue
+            if new_status != current_status:
+                expected_status = allowed_transitions.get(current_status)
 
-                if not isinstance(value, str):
-                    db.session.rollback()
+                if new_status != expected_status:
                     return jsonify({
-                        "error": f"{field} must be an ISO 8601 string or null"
+                        "error": "Invalid status transition",
+                        "current_status": current_status,
+                        "requested_status": new_status,
                     }), 400
 
-                from datetime import datetime
+                now = datetime.now(timezone.utc)
 
-                try:
-                    setattr(item, field, datetime.fromisoformat(
-                        value.replace("Z", "+00:00")
-                    ))
-                except ValueError:
-                    db.session.rollback()
-                    return jsonify({
-                        "error": f"{field} must be a valid ISO 8601 timestamp"
-                    }), 400
+                if new_status == "ACKNOWLEDGED":
+                    item.acknowledged_at = now
+
+                elif new_status == "RESOLVED":
+                    item.resolved_at = now
+
+                item.status = new_status
+
+        if "remarks" in data:
+            item.remarks = data["remarks"]
 
         db.session.commit()
+
         return jsonify(request_to_dict(item)), 200
 
     except SQLAlchemyError:
         db.session.rollback()
-        return jsonify({"error": "Database operation failed"}), 500
+        return jsonify({
+            "error": "Database operation failed"
+        }), 500
