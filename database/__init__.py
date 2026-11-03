@@ -1,12 +1,15 @@
 import os
+
 from dotenv import load_dotenv
 from flask import Flask
-from database.extensions import db, migrate
 from sqlalchemy import URL
 
+from database.extensions import db, migrate
+
+
 def create_app():
-    
     load_dotenv(override=True)
+
     app = Flask(__name__)
 
     database_url = URL.create(
@@ -24,13 +27,13 @@ def create_app():
     migrate.init_app(app, db)
 
     from database.models import (
-        assistance_request,
-        occupancy_event,
-        profile,
-        role,
-        room,
-        room_device,
-        user,
+        assistance_request,  # noqa: F401
+        occupancy_event,  # noqa: F401
+        profile,  # noqa: F401
+        role,  # noqa: F401
+        room,  # noqa: F401
+        room_device,  # noqa: F401
+        user,  # noqa: F401
     )
 
     from api.assistance.routes import assistance_bp
