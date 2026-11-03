@@ -1,7 +1,8 @@
 
-from flask import Blueprint, request, jsonify
+from datetime import UTC, datetime
+
+from flask import Blueprint, jsonify, request
 from sqlalchemy.exc import SQLAlchemyError
-from datetime import datetime, timezone
 
 from database.extensions import db
 from database.models.assistance_request import AssistanceRequest
@@ -138,17 +139,19 @@ def update_assistance_request(request_id):
     if not data:
         return jsonify({"error": "At least one field is required"}), 400
 
-    if "status" in data:
-        if not isinstance(data["status"], str) or not data["status"].strip():
-            return jsonify({
-                "error": "status must be a non-empty string"
-            }), 400
+    if "status" in data and (
+        not isinstance(data["status"], str) or not data["status"].strip()
+    ):
+        return jsonify({
+            "error": "status must be a non-empty string"
+        }), 400
 
-    if "remarks" in data:
-        if data["remarks"] is not None and not isinstance(data["remarks"], str):
-            return jsonify({
-                "error": "remarks must be a string or null"
-            }), 400
+    if "remarks" in data and (
+        data["remarks"] is not None and not isinstance(data["remarks"], str)
+    ):
+        return jsonify({
+            "error": "remarks must be a string or null"
+        }), 400
 
     try:
         item = db.session.get(AssistanceRequest, request_id)
@@ -177,7 +180,7 @@ def update_assistance_request(request_id):
                         "requested_status": new_status,
                     }), 400
 
-                now = datetime.now(timezone.utc)
+                now = datetime.now(UTC)
 
                 if new_status == "ACKNOWLEDGED":
                     item.acknowledged_at = now
