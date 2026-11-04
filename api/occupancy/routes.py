@@ -1,4 +1,6 @@
 
+from datetime import datetime, timezone
+
 from flask import Blueprint, jsonify, request
 
 from database.extensions import db
@@ -118,6 +120,9 @@ def create_occupancy_event():
             "error": "The device is not registered to this room"
         }), 400
 
+    # GET CURRENT TIMESTAMP
+    current_time = datetime.now(timezone.utc)
+
     event = OccupancyEvent(
         room_id=room.room_id,
         device_id=device.device_id,
@@ -126,8 +131,18 @@ def create_occupancy_event():
     )
 
     try:
+        # SAVE OCCUPANCY EVENT
         db.session.add(event)
+
+        # UPDATE ROOM OCCUPANCY STATUS
+        room.occupancy_status = occupancy_status
+
+        # UPDATE LAST OCCUPANCY TIMESTAMP
+        room.last_occupancy_update = current_time
+
+        # SAVE BOTH CHANGES
         db.session.commit()
+
     except Exception:
         db.session.rollback()
         return jsonify({
@@ -136,7 +151,15 @@ def create_occupancy_event():
 
     return jsonify({
         "message": "Occupancy event recorded successfully",
-        "event": serialize_event(event)
+        "event": serialize_event(event),
+        "room": {
+            "room_id": room.room_id,
+            "occupancy_status": room.occupancy_status,
+            "last_occupancy_update": (
+                room.last_occupancy_update.isoformat()
+                if room.last_occupancy_update else None
+            )
+        }
     }), 201
 
 
