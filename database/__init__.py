@@ -56,6 +56,7 @@ def create_app(config_override=None):
             methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         )
 
+    from api.assistance.routes import assistance_bp
     from database.models import (
         assistance_request,  # noqa: F401
         occupancy_event,  # noqa: F401
@@ -65,5 +66,7 @@ def create_app(config_override=None):
         room_device,  # noqa: F401
         user,  # noqa: F401
     )
+
+    app.register_blueprint(assistance_bp)
 
     return app
