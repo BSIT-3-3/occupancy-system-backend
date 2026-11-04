@@ -14,6 +14,7 @@ from api.responses import (
     success_response,
     unexpected_error_response,
 )
+from api.security import admin_required
 from services.authentication import user as user_service
 from services.errors import ServiceError
 
@@ -42,6 +43,10 @@ def _validate_user_payload(*, creating):
         password = data.get("password")
         if not isinstance(password, str) or (creating and not password):
             return None, error_response("password must be a non-empty string", 400)
+        if password and len(password) < 12:
+            return None, error_response(
+                "Admin passwords must be at least 12 characters", 400
+            )
 
     for field, limit in (("full_name", 100), ("status", 20)):
         if field not in data:
@@ -56,6 +61,7 @@ def _validate_user_payload(*, creating):
 
 
 @users_bp.post("/users")
+@admin_required
 def create_user():
     data, error = _validate_user_payload(creating=True)
     if error:
@@ -77,6 +83,7 @@ def create_user():
 
 
 @users_bp.get("/users")
+@admin_required
 def get_users():
     try:
         users = user_service.list_users()
@@ -88,6 +95,7 @@ def get_users():
 
 
 @users_bp.get("/users/<int:user_id>")
+@admin_required
 def get_user(user_id):
     try:
         user = user_service.get_user(user_id)
@@ -101,6 +109,7 @@ def get_user(user_id):
 
 
 @users_bp.put("/users/<int:user_id>")
+@admin_required
 def update_user(user_id):
     try:
         existing_user = user_service.get_user(user_id)
@@ -129,6 +138,7 @@ def update_user(user_id):
 
 
 @users_bp.delete("/users/<int:user_id>")
+@admin_required
 def delete_user(user_id):
     try:
         user_service.delete_user(user_id)

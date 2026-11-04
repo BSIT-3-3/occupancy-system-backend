@@ -6,9 +6,7 @@ from database.models.user import User
 
 def _create_user(app):
     with app.app_context():
-        role = Role(role_name="USER")
-        db.session.add(role)
-        db.session.flush()
+        role = db.session.query(Role).filter_by(role_name="ADMIN").one()
         user = User(
             username="profile-user", password="not-a-real-hash", role_id=role.role_id
         )

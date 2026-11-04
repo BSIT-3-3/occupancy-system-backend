@@ -6,34 +6,35 @@ from database.models.profile import UserProfile
 from database.models.role import Role
 from database.models.user import User
 from services.errors import (
-    ConfigurationError,
     ConflictError,
     InvalidReferenceError,
     NotFoundError,
 )
 
-DEFAULT_REGISTRATION_ROLE = "USER"
-
-
-def username_taken(username, exclude_id=None):
-    query = db.session.query(User).filter(User.username == username)
-    if exclude_id is not None:
-        query = query.filter(User.user_id != exclude_id)
-    return query.first() is not None
+ADMIN_ROLE_NAME = "ADMIN"
+PUBLIC_REGISTRATION_ROLE = "USER"
 
 
 def register_user(data):
-    """Create a user and its profile as one transaction."""
+    """Create a public USER account and its profile atomically."""
     try:
         if username_taken(data["username"]):
             raise ConflictError("Username already exists")
 
-        role = Role.query.filter_by(role_name=DEFAULT_REGISTRATION_ROLE).first()
+        role = Role.query.filter_by(role_name=PUBLIC_REGISTRATION_ROLE).first()
         if role is None:
-            raise ConfigurationError("Default registration role is not configured")
+            role = Role(
+                role_name=PUBLIC_REGISTRATION_ROLE,
+                description="Registered user",
+            )
+            db.session.add(role)
+            db.session.flush()
 
         full_name = " ".join(
-            filter(None, [data["first_name"], data.get("middle_name"), data["last_name"]])
+            filter(
+                None,
+                [data["first_name"], data.get("middle_name"), data["last_name"]],
+            )
         )
         user = User(
             username=data["username"],
@@ -55,15 +56,23 @@ def register_user(data):
         )
         db.session.commit()
         return user
-    except (KeyError, TypeError, ValueError, SQLAlchemyError):
+    except SQLAlchemyError:
         db.session.rollback()
         raise
 
 
+def username_taken(username, exclude_id=None):
+    query = db.session.query(User).filter(User.username == username)
+    if exclude_id is not None:
+        query = query.filter(User.user_id != exclude_id)
+    return query.first() is not None
+
+
 def create_user(data):
     try:
-        if db.session.get(Role, data["role_id"]) is None:
-            raise InvalidReferenceError("role_id does not exist")
+        role = db.session.get(Role, data["role_id"])
+        if role is None or role.role_name != ADMIN_ROLE_NAME:
+            raise InvalidReferenceError("Only ADMIN accounts are supported")
         if username_taken(data["username"]):
             raise ConflictError("Username already exists")
 
@@ -92,8 +101,9 @@ def get_user(user_id):
 
 def update_user(user, data):
     try:
-        if db.session.get(Role, data["role_id"]) is None:
-            raise InvalidReferenceError("role_id does not exist")
+        role = db.session.get(Role, data["role_id"])
+        if role is None or role.role_name != ADMIN_ROLE_NAME:
+            raise InvalidReferenceError("Only ADMIN accounts are supported")
         if username_taken(data["username"], exclude_id=user.user_id):
             raise ConflictError("Username already exists")
 

@@ -7,7 +7,9 @@ from services.errors import (
     ConfigurationError,
     ConflictError,
     InactiveAccountError,
+    InactiveDeviceError,
     InvalidCredentialsError,
+    InvalidDeviceCredentialsError,
     InvalidReferenceError,
     NotFoundError,
     ServiceError,
@@ -53,6 +55,8 @@ def service_error_response(error):
         ConfigurationError: 500,
         InvalidCredentialsError: 401,
         InactiveAccountError: 403,
+        InvalidDeviceCredentialsError: 401,
+        InactiveDeviceError: 403,
     }
     if not isinstance(error, ServiceError):
         raise TypeError("error must be a ServiceError")

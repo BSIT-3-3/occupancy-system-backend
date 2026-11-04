@@ -30,3 +30,11 @@ class InvalidCredentialsError(ServiceError):
 
 class InactiveAccountError(ServiceError):
     pass
+
+
+class InvalidDeviceCredentialsError(ServiceError):
+    pass
+
+
+class InactiveDeviceError(ServiceError):
+    pass

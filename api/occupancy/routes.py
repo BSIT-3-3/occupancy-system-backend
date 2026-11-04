@@ -41,6 +41,11 @@ def create_occupancy_event():
               type: string
               enum: [AVAILABLE, OCCUPIED]
               example: OCCUPIED
+      - in: header
+        name: X-Device-Key
+        type: string
+        required: true
+        description: Per-device credential provisioned by an operator
     responses:
       201:
         description: Occupancy event recorded successfully
@@ -109,7 +114,7 @@ def create_occupancy_event():
     data["occupancy_status"] = status
 
     try:
-        event = record_occupancy_event(data)
+        event = record_occupancy_event(data, request.headers.get("X-Device-Key"))
     except ServiceError as error:
         return service_error_response(error)
     except SQLAlchemyError as error:

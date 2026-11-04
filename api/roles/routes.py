@@ -13,6 +13,7 @@ from api.responses import (
     success_response,
     unexpected_error_response,
 )
+from api.security import admin_required
 from services.errors import ServiceError
 from services.role import role as role_service
 
@@ -29,6 +30,7 @@ def _validate_role_payload():
         return None, error
     if len(data["role_name"]) > 50:
         return None, error_response("role_name must not exceed 50 characters", 400)
+    data["role_name"] = data["role_name"].upper()
 
     if "description" in data:
         data["description"], error = validate_optional_string_field(
@@ -40,6 +42,7 @@ def _validate_role_payload():
 
 
 @roles_bp.post("/roles")
+@admin_required
 def create_role():
     data, error = _validate_role_payload()
     if error:
@@ -60,6 +63,7 @@ def create_role():
 
 
 @roles_bp.get("/roles")
+@admin_required
 def get_roles():
     try:
         roles = role_service.list_roles()
@@ -71,6 +75,7 @@ def get_roles():
 
 
 @roles_bp.get("/roles/<int:role_id>")
+@admin_required
 def get_role(role_id):
     try:
         role = role_service.get_role(role_id)
@@ -84,6 +89,7 @@ def get_role(role_id):
 
 
 @roles_bp.put("/roles/<int:role_id>")
+@admin_required
 def update_role(role_id):
     try:
         existing_role = role_service.get_role(role_id)
@@ -112,6 +118,7 @@ def update_role(role_id):
 
 
 @roles_bp.delete("/roles/<int:role_id>")
+@admin_required
 def delete_role(role_id):
     try:
         role_service.delete_role(role_id)

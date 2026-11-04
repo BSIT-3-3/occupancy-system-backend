@@ -15,6 +15,8 @@ def authenticate_user(username, password):
 
     if user is None or not check_password_hash(user.password, password):
         raise InvalidCredentialsError("Invalid username or password")
-    if user.status.upper() != "ACTIVE":
+    if (user.status or "").upper() != "ACTIVE":
         raise InactiveAccountError("Account is inactive")
+    if user.role is None or user.role.role_name != "ADMIN":
+        raise InvalidCredentialsError("Invalid username or password")
     return user

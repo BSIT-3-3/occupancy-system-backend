@@ -1,8 +1,19 @@
 from flask import Blueprint, current_app
+from flask_jwt_extended import create_access_token
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
-from api.authentication.validation import validate_json_request, validate_string_field
-from api.responses import error_response, service_error_response, success_response
+from api.authentication.validation import (
+    validate_json_request,
+    validate_optional_string_field,
+    validate_string_field,
+)
+from api.responses import (
+    database_error_response,
+    error_response,
+    service_error_response,
+    success_response,
+)
+from api.security import admin_required
 from database.extensions import db
 from services.authentication.auth import authenticate_user
 from services.authentication.user import register_user
@@ -11,10 +22,36 @@ from services.errors import ServiceError
 auth_bp = Blueprint("authentication", __name__, url_prefix="/api/auth")
 
 
+@auth_bp.get("/verify")
+@admin_required
+def verify_token():
+    """Verify that the bearer token belongs to an active administrator.
+    ---
+    tags:
+      - Authentication
+    security:
+      - Bearer: []
+    responses:
+      200:
+        description: Token is valid for an active administrator
+        schema:
+          type: object
+          properties:
+            valid:
+              type: boolean
+              example: true
+      401:
+        description: Token is missing, invalid, or expired
+      403:
+        description: Token is valid but the account is not an active administrator
+    """
+    return success_response({"valid": True})
+
+
 @auth_bp.post("/login")
 def login():
     """
-    Authenticate a user.
+    Authenticate an admin account.
     ---
     tags:
       - Authentication
@@ -35,31 +72,10 @@ def login():
               example: admin
             password:
               type: string
-              example: Admin123!
+              example: CorrectHorseBatteryStaple
     responses:
       200:
-        description: Login successful
-        schema:
-          type: object
-          properties:
-            message:
-              type: string
-              example: Login successful
-            user:
-              type: object
-              properties:
-                user_id:
-                  type: integer
-                username:
-                  type: string
-                full_name:
-                  type: string
-                  nullable: true
-                role_id:
-                  type: integer
-                status:
-                  type: string
-                  example: ACTIVE
+        description: Login successful; includes a bearer access token
       400:
         description: Invalid request or missing credentials
       401:
@@ -74,13 +90,12 @@ def login():
     username = data.get("username")
     if not isinstance(username, str) or not username.strip():
         return error_response("Username is required", 400)
-    username = username.strip()
     password = data.get("password")
     if not isinstance(password, str) or not password:
         return error_response("Password is required", 400)
 
     try:
-        user = authenticate_user(username, password)
+        user = authenticate_user(username.strip(), password)
     except ServiceError as error:
         return service_error_response(error)
     except SQLAlchemyError as error:
@@ -91,19 +106,23 @@ def login():
         )
         return error_response("Database operation failed", 500)
 
-    return success_response({"message": "Login successful", "user": user.to_dict()})
+    token = create_access_token(identity=str(user.user_id))
+    return success_response(
+        {
+            "message": "Login successful",
+            "access_token": token,
+            "user": user.to_dict(),
+        }
+    )
 
 
 @auth_bp.post("/register")
 def register():
-    """
-    Register a new user.
+    """Register a public non-admin user and profile.
     ---
     tags:
       - Authentication
     consumes:
-      - application/json
-    produces:
       - application/json
     parameters:
       - in: body
@@ -116,11 +135,9 @@ def register():
             username:
               type: string
               maxLength: 50
-              example: johndoe
             password:
               type: string
               minLength: 8
-              example: SecurePassword123!
             first_name:
               type: string
               maxLength: 50
@@ -135,27 +152,9 @@ def register():
               maxLength: 20
     responses:
       201:
-        description: Registration successful
-        schema:
-          type: object
-          properties:
-            message:
-              type: string
-              example: Registration successful
-            user:
-              type: object
-              properties:
-                user_id:
-                  type: integer
-                username:
-                  type: string
-                full_name:
-                  type: string
-                status:
-                  type: string
-                  example: ACTIVE
+        description: Registration successful; account cannot log in
       400:
-        description: Invalid request, missing fields, or invalid input
+        description: Invalid request or field values
       409:
         description: Username already exists
       500:
@@ -167,52 +166,36 @@ def register():
         return error
 
     for field in required_fields:
-        value, error = validate_string_field(data, field)
+        data[field], error = validate_string_field(data, field)
         if error:
             return error
-        data[field] = value
 
-    for field in ("middle_name", "contact_number"):
-        if field in data and data[field] is not None:
-            if not isinstance(data[field], str):
-                return error_response(f"{field} must be a string", 400)
-            data[field] = data[field].strip()
-
-    limits = {
-        "username": 50,
-        "first_name": 50,
-        "middle_name": 50,
-        "last_name": 50,
-        "contact_number": 20,
-    }
-    
-    for field, limit in limits.items():
-        if len(data.get(field) or "") > limit:
-            return error_response(
-                f"{field} must not exceed {limit} characters", 400
-            )
+    if len(data["username"]) > 50:
+        return error_response("username must not exceed 50 characters", 400)
     if len(data["password"]) < 8:
         return error_response("Password must be at least 8 characters", 400)
+
+    for field, limit in (("first_name", 50), ("last_name", 50)):
+        if len(data[field]) > limit:
+            return error_response(f"{field} must not exceed {limit} characters", 400)
+
+    for field, limit in (("middle_name", 50), ("contact_number", 20)):
+        data[field], error = validate_optional_string_field(
+            data, field, limit, allow_empty=True
+        )
+        if error:
+            return error
 
     try:
         user = register_user(data)
     except ServiceError as error:
         return service_error_response(error)
-    except IntegrityError:
-        db.session.rollback()
-        return error_response("Username already exists", 409)
+    except IntegrityError as error:
+        return database_error_response(
+            "authentication.register", error, conflict_message="Username already exists"
+        )
     except SQLAlchemyError as error:
-        db.session.rollback()
-        current_app.logger.error(
-            "Database operation registration failed (%s)", type(error).__name__
-        )
-        return error_response("Database operation failed", 500)
-    except (KeyError, TypeError, ValueError) as error:
-        db.session.rollback()
-        current_app.logger.error(
-            "Unexpected registration failure (%s)", type(error).__name__
-        )
-        return error_response("Registration failed", 500)
+        return database_error_response("authentication.register", error)
 
     return success_response(
         {

@@ -2,36 +2,31 @@ from database.extensions import db
 from database.models.role import Role
 
 
-def test_role_crud_and_validation(client):
-    invalid = client.post("/roles", json={"role_name": "  "})
-    assert invalid.status_code == 400
+def test_role_api_only_exposes_the_admin_role(client, app):
+    with app.app_context():
+        db.session.add(Role(role_name="STAFF", description="Legacy role"))
+        db.session.commit()
 
-    created = client.post("/roles", json={"role_name": "STAFF", "description": "Staff"})
-    assert created.status_code == 201
-    role_id = created.json["role_id"]
+    roles = client.get("/roles")
+    assert roles.status_code == 200
+    assert len(roles.json) == 1
+    assert roles.json[0]["role_name"] == "ADMIN"
 
-    assert client.get("/roles").json == [created.json]
-    assert client.get(f"/roles/{role_id}").json == created.json
-
+    admin = roles.json[0]
     updated = client.put(
-        f"/roles/{role_id}", json={"role_name": "ADMIN", "description": None}
+        f"/roles/{admin['role_id']}",
+        json={"role_name": "ADMIN", "description": "Administrator"},
     )
     assert updated.status_code == 200
     assert updated.json["role_name"] == "ADMIN"
-    assert updated.json["description"] is None
-    assert (
-        client.put(f"/roles/{role_id}", json={"role_name": "x" * 51}).status_code == 400
-    )
 
-    assert client.delete(f"/roles/{role_id}").json == {"message": "Role deleted"}
+    rejected = client.post("/roles", json={"role_name": "STAFF"})
+    assert rejected.status_code == 400
+    assert rejected.json == {"error": "Only the ADMIN role is supported"}
 
-
-def test_role_unique_conflict_rolls_back(client, app):
-    first = client.post("/roles", json={"role_name": "STAFF"})
-    assert first.status_code == 201
-    duplicate = client.post("/roles", json={"role_name": "STAFF"})
-    assert duplicate.status_code == 409
-    assert duplicate.json == {"error": "Role already exists"}
+    deleted = client.delete(f"/roles/{admin['role_id']}")
+    assert deleted.status_code == 409
+    assert deleted.json == {"error": "The ADMIN role cannot be deleted"}
 
     with app.app_context():
         assert db.session.query(Role).filter_by(role_name="STAFF").count() == 1

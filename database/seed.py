@@ -8,8 +8,7 @@ def seed_data():
     # Seed Roles
     roles = [
         Role(role_name="ADMIN", description="System administrator"),
-        Role(role_name="STAFF", description="Staff member"),
-        Role(role_name="USER", description="Regular user"),
+        Role(role_name="USER", description="Registered user"),
     ]
 
     for role in roles:
