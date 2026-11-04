@@ -36,6 +36,7 @@ def create_app():
         room_device,  # noqa: F401
         user,  # noqa: F401
     )
+
     app.register_blueprint(assistance_bp)
 
     return app
