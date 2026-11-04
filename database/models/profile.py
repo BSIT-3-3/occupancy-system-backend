@@ -12,3 +12,12 @@ class UserProfile(db.Model):
     updated_at = db.Column(db.DateTime(timezone=True), onupdate=db.func.now())
 
     user = db.relationship("User", backref=db.backref("profile", uselist=False))
+
+    def to_dict(self):
+        return {
+            "user_id": self.user_id,
+            "first_name": self.first_name,
+            "middle_name": self.middle_name,
+            "last_name": self.last_name,
+            "contact_number": self.contact_number,
+        }

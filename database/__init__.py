@@ -7,7 +7,7 @@ from sqlalchemy import URL
 from database.extensions import db, migrate
 
 
-def create_app():
+def create_app(config_override=None):
     load_dotenv(override=True)
 
     app = Flask(__name__)
@@ -22,6 +22,9 @@ def create_app():
     )
 
     app.config["SQLALCHEMY_DATABASE_URI"] = database_url
+    if config_override:
+        # Test configurations are applied before extensions create their engines.
+        app.config.update(config_override)
 
     db.init_app(app)
     migrate.init_app(app, db)
