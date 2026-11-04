@@ -15,3 +15,13 @@ class User(db.Model):
     )
 
     role = db.relationship("Role", backref="users")
+
+    def to_dict(self):
+        """Return public user fields without exposing the password hash."""
+        return {
+            "user_id": self.user_id,
+            "username": self.username,
+            "full_name": self.full_name,
+            "role_id": self.role_id,
+            "status": self.status,
+        }
