@@ -96,8 +96,8 @@ def test_user_database_failure_rolls_back_and_hides_exception(client, app, monke
         db.session.commit()
         role_id = role.role_id
 
-    from sqlalchemy.orm import Session
     from sqlalchemy.exc import SQLAlchemyError
+    from sqlalchemy.orm import Session
 
     def fail_commit(_session):
         raise SQLAlchemyError("sensitive database statement details")
@@ -136,8 +136,8 @@ def test_registration_creates_user_and_profile_atomically(client, app, monkeypat
         assert db.session.get(UserProfile, created.user_id) is not None
 
     # A failed commit must leave neither half of the registration behind.
-    from sqlalchemy.orm import Session
     from sqlalchemy.exc import SQLAlchemyError
+    from sqlalchemy.orm import Session
 
     def fail_commit(_session):
         raise SQLAlchemyError("sensitive database statement details")

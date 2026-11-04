@@ -1,4 +1,4 @@
-from flask import Blueprint, current_app, jsonify, request
+from flask import Blueprint, current_app, jsonify
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from api.authentication.validation import (
@@ -81,7 +81,7 @@ def create_profile():
         )
     except SQLAlchemyError as error:
         return _database_failure("profile.create", error)
-    except Exception as error:
+    except (AttributeError, TypeError, ValueError) as error:
         return _database_failure("profile.create", error)
 
 
@@ -101,7 +101,7 @@ def get_profiles():
         return jsonify([profile.to_dict() for profile in profiles])
     except SQLAlchemyError as error:
         return _database_failure("profile.list", error)
-    except Exception as error:
+    except (AttributeError, TypeError, ValueError) as error:
         return _database_failure("profile.list", error)
 
 
@@ -114,7 +114,7 @@ def get_profile(user_id):
         return jsonify(profile.to_dict())
     except SQLAlchemyError as error:
         return _database_failure("profile.get", error)
-    except Exception as error:
+    except (AttributeError, TypeError, ValueError) as error:
         return _database_failure("profile.get", error)
 
 
@@ -139,7 +139,7 @@ def update_profile(user_id):
         return _database_failure("profile.update", error, conflict_message="Profile cannot be updated")
     except SQLAlchemyError as error:
         return _database_failure("profile.update", error)
-    except Exception as error:
+    except (AttributeError, TypeError, ValueError) as error:
         return _database_failure("profile.update", error)
 
 
@@ -157,6 +157,4 @@ def delete_profile(user_id):
             "profile.delete", error, conflict_message="Profile cannot be deleted"
         )
     except SQLAlchemyError as error:
-        return _database_failure("profile.delete", error)
-    except Exception as error:
         return _database_failure("profile.delete", error)

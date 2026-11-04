@@ -1,4 +1,4 @@
-from flask import Blueprint, current_app, jsonify, request
+from flask import Blueprint, current_app, jsonify
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from api.authentication.validation import (
@@ -56,7 +56,7 @@ def create_role():
         return _database_failure("role.create", error, conflict_message="Role already exists")
     except SQLAlchemyError as error:
         return _database_failure("role.create", error)
-    except Exception as error:
+    except (AttributeError, TypeError, ValueError) as error:
         return _database_failure("role.create", error)
 
 
@@ -67,7 +67,7 @@ def get_roles():
         return jsonify([role.to_dict() for role in roles])
     except SQLAlchemyError as error:
         return _database_failure("role.list", error)
-    except Exception as error:
+    except (AttributeError, TypeError, ValueError) as error:
         return _database_failure("role.list", error)
 
 
@@ -80,7 +80,7 @@ def get_role(role_id):
         return jsonify(role.to_dict())
     except SQLAlchemyError as error:
         return _database_failure("role.get", error)
-    except Exception as error:
+    except (AttributeError, TypeError, ValueError) as error:
         return _database_failure("role.get", error)
 
 
@@ -102,7 +102,7 @@ def update_role(role_id):
         return _database_failure("role.update", error, conflict_message="Role already exists")
     except SQLAlchemyError as error:
         return _database_failure("role.update", error)
-    except Exception as error:
+    except (AttributeError, TypeError, ValueError) as error:
         return _database_failure("role.update", error)
 
 
@@ -118,6 +118,4 @@ def delete_role(role_id):
     except IntegrityError as error:
         return _database_failure("role.delete", error, conflict_message="Role is assigned to users")
     except SQLAlchemyError as error:
-        return _database_failure("role.delete", error)
-    except Exception as error:
         return _database_failure("role.delete", error)

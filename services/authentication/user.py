@@ -1,4 +1,4 @@
-from flask import Blueprint, current_app, jsonify, request
+from flask import Blueprint, current_app, jsonify
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from werkzeug.security import generate_password_hash
 
@@ -68,7 +68,7 @@ def register_user(data):
             "full_name": user.full_name,
             "status": user.status,
         }, None, 201
-    except Exception:
+    except (KeyError, TypeError, ValueError, SQLAlchemyError):
         db.session.rollback()
         raise
 
@@ -144,7 +144,7 @@ def create_user():
         return _database_failure("user.create", error, conflict_message="Username already exists")
     except SQLAlchemyError as error:
         return _database_failure("user.create", error)
-    except Exception as error:
+    except (AttributeError, TypeError, ValueError) as error:
         return _database_failure("user.create", error)
 
 
@@ -155,7 +155,7 @@ def get_users():
         return jsonify([user.to_dict() for user in users])
     except SQLAlchemyError as error:
         return _database_failure("user.list", error)
-    except Exception as error:
+    except (AttributeError, TypeError, ValueError) as error:
         return _database_failure("user.list", error)
 
 
@@ -168,7 +168,7 @@ def get_user(user_id):
         return jsonify(user.to_dict())
     except SQLAlchemyError as error:
         return _database_failure("user.get", error)
-    except Exception as error:
+    except (AttributeError, TypeError, ValueError) as error:
         return _database_failure("user.get", error)
 
 
@@ -200,7 +200,7 @@ def update_user(user_id):
         return _database_failure("user.update", error, conflict_message="Username already exists")
     except SQLAlchemyError as error:
         return _database_failure("user.update", error)
-    except Exception as error:
+    except (AttributeError, TypeError, ValueError) as error:
         return _database_failure("user.update", error)
 
 
@@ -216,6 +216,4 @@ def delete_user(user_id):
     except IntegrityError as error:
         return _database_failure("user.delete", error, conflict_message="User cannot be deleted")
     except SQLAlchemyError as error:
-        return _database_failure("user.delete", error)
-    except Exception as error:
         return _database_failure("user.delete", error)

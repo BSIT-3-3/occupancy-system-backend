@@ -1,15 +1,14 @@
 from flask import Blueprint, current_app, jsonify, request
-from werkzeug.security import check_password_hash
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from werkzeug.security import check_password_hash
 
-from database.extensions import db
-from database.models.user import User
-
-from services.authentication.user import register_user
 from api.authentication.validation import (
     validate_json_request,
     validate_string_field,
 )
+from database.extensions import db
+from database.models.user import User
+from services.authentication.user import register_user
 
 auth_bp = Blueprint("authentication", __name__, url_prefix="/api/auth")
 
@@ -265,7 +264,7 @@ def register():
             "Database operation registration failed (%s)", type(error).__name__
         )
         return jsonify({"error": "Database operation failed"}), 500
-    except Exception as error:
+    except (KeyError, TypeError, ValueError) as error:
         db.session.rollback()
         current_app.logger.error(
             "Unexpected registration failure (%s)", type(error).__name__
