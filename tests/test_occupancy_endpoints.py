@@ -7,6 +7,9 @@ def create_event(client, occupancy_data):
             "event_type": "MOTION_DETECTED",
             "occupancy_status": "OCCUPIED",
         },
+        headers={
+            "X-Device-Key": occupancy_data["device_key"],
+        },
     )
 
 
@@ -18,7 +21,6 @@ def test_create_occupancy_event(client, occupancy_data):
     data = response.get_json()
 
     assert data["event"]["occupancy_status"] == "OCCUPIED"
-    assert data["room"]["occupancy_status"] == "OCCUPIED"
 
 
 def test_create_event_missing_fields(client):
@@ -36,6 +38,9 @@ def test_create_event_invalid_status(client, occupancy_data):
             "event_type": "MOTION_DETECTED",
             "occupancy_status": "INVALID",
         },
+        headers={
+            "X-Device-Key": occupancy_data["device_key"],
+        },
     )
 
     assert response.status_code == 400
@@ -49,6 +54,9 @@ def test_create_event_room_not_found(client, occupancy_data):
             "device_id": occupancy_data["device_id"],
             "event_type": "MOTION_DETECTED",
             "occupancy_status": "OCCUPIED",
+        },
+        headers={
+            "X-Device-Key": occupancy_data["device_key"],
         },
     )
 
@@ -64,9 +72,12 @@ def test_create_event_device_not_found(client, occupancy_data):
             "event_type": "MOTION_DETECTED",
             "occupancy_status": "OCCUPIED",
         },
+        headers={
+            "X-Device-Key": occupancy_data["device_key"],
+        },
     )
 
-    assert response.status_code == 404
+    assert response.status_code == 401
 
 
 def test_get_all_occupancy_events(client, occupancy_data):

@@ -1,13 +1,17 @@
-import pytest
+import hashlib
 
-from api.authentication.routes import auth_bp
+import pytest
+from flask_jwt_extended import create_access_token
+from werkzeug.security import generate_password_hash
+
+from api import register_blueprints
+from cli import register_cli_commands
 from database import create_app
 from database.extensions import db
+from database.models.role import Role
 from database.models.room import Room
 from database.models.room_device import RoomDevice
-from services.authentication.user import users_bp
-from services.authentication.user_profile import profiles_bp
-from services.role.role import roles_bp
+from database.models.user import User
 
 
 @pytest.fixture
@@ -17,18 +21,33 @@ def app():
             "TESTING": True,
             "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
             "SQLALCHEMY_TRACK_MODIFICATIONS": False,
+            "JWT_SECRET_KEY": ("test-only-secret-key-material-at-least-32-characters"),
         }
     )
 
-    # Register additional blueprints
-    # Occupancy, device, and gateway are already registered by create_app()
-    app.register_blueprint(auth_bp)
-    app.register_blueprint(roles_bp)
-    app.register_blueprint(users_bp)
-    app.register_blueprint(profiles_bp)
+    register_blueprints(app)
+    register_cli_commands(app)
 
     with app.app_context():
         db.create_all()
+
+        admin_role = Role(
+            role_name="ADMIN",
+            description="System administrator",
+        )
+        db.session.add(admin_role)
+        db.session.flush()
+
+        admin = User(
+            username="test-admin",
+            password=generate_password_hash("test-admin-password-123"),
+            role_id=admin_role.role_id,
+            status="ACTIVE",
+        )
+        db.session.add(admin)
+        db.session.commit()
+
+        app.config["TEST_ADMIN_ID"] = admin.user_id
 
         yield app
 
@@ -38,11 +57,25 @@ def app():
 
 @pytest.fixture
 def client(app):
+    client = app.test_client()
+
+    with app.app_context():
+        token = create_access_token(identity=str(app.config["TEST_ADMIN_ID"]))
+
+    client.environ_base["HTTP_AUTHORIZATION"] = f"Bearer {token}"
+
+    return client
+
+
+@pytest.fixture
+def unauthenticated_client(app):
     return app.test_client()
 
 
 @pytest.fixture
 def occupancy_data(app):
+    device_key = "test-device-secret-key-12345"
+
     with app.app_context():
         room = Room(
             room_number="TEST-ROOM-001",
@@ -60,6 +93,7 @@ def occupancy_data(app):
             device_code="TEST-CODE-001",
             device_name="Test Device",
             registration_status="REGISTERED",
+            credential_hash=hashlib.sha256(device_key.encode("utf-8")).hexdigest(),
         )
 
         db.session.add(device)
@@ -68,4 +102,5 @@ def occupancy_data(app):
         return {
             "room_id": room.room_id,
             "device_id": device.device_id,
+            "device_key": device_key,
         }

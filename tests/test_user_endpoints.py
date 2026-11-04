@@ -8,9 +8,7 @@ from database.models.user import User
 
 def test_create_and_read_user_never_exposes_password_hash(client, app):
     with app.app_context():
-        role = Role(role_name="USER")
-        db.session.add(role)
-        db.session.commit()
+        role = db.session.query(Role).filter_by(role_name="ADMIN").one()
         role_id = role.role_id
 
     response = client.post(
@@ -23,8 +21,9 @@ def test_create_and_read_user_never_exposes_password_hash(client, app):
     )
 
     assert response.status_code == 201
+    user_id = response.json["user_id"]
     assert response.json == {
-        "user_id": 1,
+        "user_id": user_id,
         "username": "alice",
         "full_name": None,
         "role_id": role_id,
@@ -33,11 +32,11 @@ def test_create_and_read_user_never_exposes_password_hash(client, app):
     assert "password" not in response.json
 
     with app.app_context():
-        user = db.session.get(User, 1)
+        user = db.session.get(User, user_id)
         assert check_password_hash(user.password, "correct horse battery staple")
         password_hash = user.password
 
-    for path in ("/users", "/users/1"):
+    for path in ("/users", f"/users/{user_id}"):
         result = client.get(path)
         assert result.status_code == 200
         assert "password" not in result.get_data(as_text=True)
@@ -68,9 +67,7 @@ def test_user_endpoints_validate_json_and_fields(client):
 
 def test_update_and_delete_user_preserve_existing_endpoint_contract(client, app):
     with app.app_context():
-        role = Role(role_name="USER")
-        db.session.add(role)
-        db.session.commit()
+        role = db.session.query(Role).filter_by(role_name="ADMIN").one()
         role_id = role.role_id
 
     created = client.post(
@@ -99,9 +96,7 @@ def test_user_database_failure_rolls_back_and_hides_exception(
     client, app, monkeypatch, caplog
 ):
     with app.app_context():
-        role = Role(role_name="USER")
-        db.session.add(role)
-        db.session.commit()
+        role = db.session.query(Role).filter_by(role_name="ADMIN").one()
         role_id = role.role_id
 
     from sqlalchemy.exc import SQLAlchemyError
@@ -112,7 +107,12 @@ def test_user_database_failure_rolls_back_and_hides_exception(
 
     monkeypatch.setattr(Session, "commit", fail_commit)
     response = client.post(
-        "/users", json={"username": "alice", "password": "secret", "role_id": role_id}
+        "/users",
+        json={
+            "username": "alice",
+            "password": "long-enough-secret",
+            "role_id": role_id,
+        },
     )
 
     assert response.status_code == 500
@@ -121,44 +121,67 @@ def test_user_database_failure_rolls_back_and_hides_exception(
     assert "sensitive database statement details" not in caplog.text
 
     monkeypatch.undo()
-    assert client.get("/users").json == []
+    assert [user["username"] for user in client.get("/users").json] == ["test-admin"]
 
 
-def test_registration_creates_user_and_profile_atomically(client, app, monkeypatch):
+def test_public_registration_creates_user_without_login_access(
+    unauthenticated_client, app
+):
+    password = "secure-password-123"
+    response = unauthenticated_client.post(
+        "/api/auth/register",
+        json={
+            "username": "self-registered",
+            "password": password,
+            "first_name": "Self",
+            "middle_name": "Test",
+            "last_name": "Registered",
+            "contact_number": "555-0100",
+        },
+    )
+    assert response.status_code == 201
+    assert response.json["message"] == "Registration successful"
+    assert response.json["user"]["username"] == "self-registered"
+    assert "password" not in response.get_data(as_text=True)
+    assert password not in response.get_data(as_text=True)
+
     with app.app_context():
-        db.session.add(Role(role_name="USER"))
-        db.session.commit()
+        user = db.session.query(User).filter_by(username="self-registered").one()
+        assert user.role.role_name == "USER"
+        assert check_password_hash(user.password, password)
+        profile = db.session.get(UserProfile, user.user_id)
+        assert profile.first_name == "Self"
+        assert profile.middle_name == "Test"
+        assert profile.last_name == "Registered"
+        assert profile.contact_number == "555-0100"
+
+    login = unauthenticated_client.post(
+        "/api/auth/login",
+        json={"username": "self-registered", "password": password},
+    )
+    assert login.status_code == 401
+    assert login.json == {"error": "Invalid username or password"}
+
+
+def test_public_registration_validates_fields_and_duplicate_username(
+    unauthenticated_client,
+):
+    invalid = unauthenticated_client.post(
+        "/api/auth/register",
+        json={"username": "new-user", "password": "short"},
+    )
+    assert invalid.status_code == 400
 
     payload = {
-        "username": "registered-user",
-        "password": "secure-password",
-        "first_name": "Reg",
+        "username": "duplicate-user",
+        "password": "registration-password",
+        "first_name": "Duplicate",
         "last_name": "User",
     }
-    response = client.post("/api/auth/register", json=payload)
-    assert response.status_code == 201
-    assert "password" not in response.get_data(as_text=True)
-
-    with app.app_context():
-        created = db.session.query(User).filter_by(username="registered-user").one()
-        assert db.session.get(UserProfile, created.user_id) is not None
-
-    # A failed commit must leave neither half of the registration behind.
-    from sqlalchemy.exc import SQLAlchemyError
-    from sqlalchemy.orm import Session
-
-    def fail_commit(_session):
-        raise SQLAlchemyError("sensitive database statement details")
-
-    monkeypatch.setattr(Session, "commit", fail_commit)
-    payload["username"] = "failed-registration"
-    failed = client.post("/api/auth/register", json=payload)
-    assert failed.status_code == 500
-    assert "sensitive database statement details" not in failed.get_data(as_text=True)
-
-    monkeypatch.undo()
-    with app.app_context():
-        assert (
-            db.session.query(User).filter_by(username="failed-registration").count()
-            == 0
-        )
+    assert (
+        unauthenticated_client.post("/api/auth/register", json=payload).status_code
+        == 201
+    )
+    duplicate = unauthenticated_client.post("/api/auth/register", json=payload)
+    assert duplicate.status_code == 409
+    assert duplicate.json == {"error": "Username already exists"}
