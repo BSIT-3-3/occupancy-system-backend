@@ -8,7 +8,7 @@ from sqlalchemy import URL
 from database.extensions import db, migrate
 
 
-def create_app():
+def create_app(config_override=None):
     load_dotenv(override=True)
 
     app = Flask(__name__)
@@ -24,18 +24,22 @@ def create_app():
 
     app.config["SQLALCHEMY_DATABASE_URI"] = database_url
 
+    if config_override:
+        # Test configurations are applied before extensions create their engines.
+        app.config.update(config_override)
+
     db.init_app(app)
     migrate.init_app(app, db)
 
     # Import database models
     from database.models import (
-        assistance_request,
-        occupancy_event,
-        profile,
-        role,
-        room,
-        room_device,
-        user,
+        assistance_request,  # noqa: F401
+        occupancy_event,  # noqa: F401
+        profile,  # noqa: F401
+        role,  # noqa: F401
+        room,  # noqa: F401
+        room_device,  # noqa: F401
+        user,  # noqa: F401
     )
 
     # Register Room Device API

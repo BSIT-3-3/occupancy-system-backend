@@ -2,11 +2,12 @@
 from datetime import datetime, timezone
 
 from flask import Blueprint, jsonify, request
+from sqlalchemy.exc import SQLAlchemyError
 
 from database.extensions import db
+from database.models.occupancy_event import OccupancyEvent
 from database.models.room import Room
 from database.models.room_device import RoomDevice
-from database.models.occupancy_event import OccupancyEvent
 
 
 occupancy_bp = Blueprint(
@@ -33,6 +34,54 @@ def serialize_event(event):
 # POST: CREATE A NEW OCCUPANCY EVENT
 @occupancy_bp.post("/events")
 def create_occupancy_event():
+    """
+    Record an occupancy event.
+    ---
+    tags:
+      - Occupancy
+    consumes:
+      - application/json
+    produces:
+      - application/json
+    parameters:
+      - in: body
+        name: body
+        required: true
+        description: Occupancy event details sent by a room device
+        schema:
+          type: object
+          required:
+            - room_id
+            - device_id
+            - event_type
+            - occupancy_status
+          properties:
+            room_id:
+              type: integer
+              example: 1
+            device_id:
+              type: string
+              example: ROOM-001-DEVICE
+            event_type:
+              type: string
+              example: MOTION_DETECTED
+            occupancy_status:
+              type: string
+              enum:
+                - AVAILABLE
+                - OCCUPIED
+              example: OCCUPIED
+    responses:
+      201:
+        description: Occupancy event recorded successfully
+      400:
+        description: Invalid request
+      404:
+        description: Room or room device not found
+      500:
+        description: Failed to save occupancy event
+    """
+
     if not request.is_json:
         return jsonify({
             "error": "Request must use JSON format"
@@ -120,7 +169,6 @@ def create_occupancy_event():
             "error": "The device is not registered to this room"
         }), 400
 
-    # GET CURRENT TIMESTAMP
     current_time = datetime.now(timezone.utc)
 
     event = OccupancyEvent(
@@ -131,19 +179,17 @@ def create_occupancy_event():
     )
 
     try:
-        # SAVE OCCUPANCY EVENT
         db.session.add(event)
 
-        # UPDATE ROOM OCCUPANCY STATUS
+        # Update room occupancy status
         room.occupancy_status = occupancy_status
 
-        # UPDATE LAST OCCUPANCY TIMESTAMP
+        # Update last occupancy timestamp
         room.last_occupancy_update = current_time
 
-        # SAVE BOTH CHANGES
         db.session.commit()
 
-    except Exception:
+    except SQLAlchemyError:
         db.session.rollback()
         return jsonify({
             "error": "Failed to save occupancy event"
@@ -166,6 +212,7 @@ def create_occupancy_event():
 # GET: RETRIEVE ALL OCCUPANCY EVENTS
 @occupancy_bp.get("/events")
 def get_occupancy_events():
+
     events = OccupancyEvent.query.order_by(
         OccupancyEvent.occupancy_event_id.desc()
     ).all()
@@ -179,6 +226,7 @@ def get_occupancy_events():
 # GET BY ID: RETRIEVE ONE OCCUPANCY EVENT
 @occupancy_bp.get("/events/<int:event_id>")
 def get_occupancy_event(event_id):
+
     event = db.session.get(OccupancyEvent, event_id)
 
     if event is None:
@@ -195,6 +243,7 @@ def get_occupancy_event(event_id):
 # PUT BY ID: UPDATE AN OCCUPANCY EVENT
 @occupancy_bp.put("/events/<int:event_id>")
 def update_occupancy_event(event_id):
+
     event = db.session.get(OccupancyEvent, event_id)
 
     if event is None:
@@ -307,7 +356,8 @@ def update_occupancy_event(event_id):
 
     try:
         db.session.commit()
-    except Exception:
+
+    except SQLAlchemyError:
         db.session.rollback()
         return jsonify({
             "error": "Failed to update occupancy event"
@@ -322,6 +372,7 @@ def update_occupancy_event(event_id):
 # DELETE BY ID: DELETE AN OCCUPANCY EVENT
 @occupancy_bp.delete("/events/<int:event_id>")
 def delete_occupancy_event(event_id):
+
     event = db.session.get(OccupancyEvent, event_id)
 
     if event is None:
@@ -333,7 +384,8 @@ def delete_occupancy_event(event_id):
     try:
         db.session.delete(event)
         db.session.commit()
-    except Exception:
+
+    except SQLAlchemyError:
         db.session.rollback()
         return jsonify({
             "error": "Failed to delete occupancy event"

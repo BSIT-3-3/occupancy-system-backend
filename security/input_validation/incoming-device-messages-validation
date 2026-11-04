@@ -1,0 +1,135 @@
+from flask import Blueprint, request, jsonify
+from database.extensions import db
+from models.room_device import RoomDevice
+
+device_messages_bp = Blueprint(
+    "device_messages",
+    __name__,
+    url_prefix="/api/devices"
+)
+
+# Allowed message types and their required payload fields.
+MESSAGE_SCHEMAS = {
+    "occupancy_update": {
+        "occupancy_status": {"AVAILABLE", "OCCUPIED"}
+    },
+    "assistance_request": {
+        "button_pressed": bool
+    },
+    "emergency_alert": {
+        "alert_code": str,
+        "message": str
+    },
+    "heartbeat": {
+        "status": {"ONLINE", "OFFLINE"}
+    }
+}
+
+
+def validate_payload(message_type, payload):
+    """Return an error message if the payload is invalid."""
+    if not isinstance(payload, dict):
+        return "Payload must be a JSON object."
+
+    schema = MESSAGE_SCHEMAS[message_type]
+
+    for field, expected in schema.items():
+        if field not in payload:
+            return f"Missing required payload field: {field}."
+
+        value = payload[field]
+
+        # A set means the field must match one of the allowed values.
+        if isinstance(expected, set):
+            if value not in expected:
+                return (
+                    f"Invalid value for '{field}'. "
+                    f"Allowed values: {sorted(expected)}."
+                )
+
+        # Exact type check prevents bool from being accepted as an integer.
+        elif type(value) is not expected:
+            return f"Field '{field}' must be of type {expected.__name__}."
+
+        if isinstance(value, str) and not value.strip():
+            return f"Field '{field}' cannot be empty."
+
+    return None
+
+
+@device_messages_bp.route("/messages", methods=["POST"])
+def receive_device_message():
+    # 1. Require JSON.
+    if not request.is_json:
+        return jsonify({
+            "success": False,
+            "error": "Content-Type must be application/json."
+        }), 415
+
+    data = request.get_json(silent=True)
+
+    if not isinstance(data, dict):
+        return jsonify({
+            "success": False,
+            "error": "Request body must be a valid JSON object."
+        }), 400
+
+    # 2. Validate top-level fields.
+    allowed_fields = {"device_id", "message_type", "payload"}
+
+    if set(data.keys()) - allowed_fields:
+        return jsonify({
+            "success": False,
+            "error": "Request contains unsupported fields."
+        }), 400
+
+    device_id = data.get("device_id")
+    message_type = data.get("message_type")
+    payload = data.get("payload")
+
+    if not isinstance(device_id, str) or not device_id.strip():
+        return jsonify({
+            "success": False,
+            "error": "A valid device_id is required."
+        }), 400
+
+    if not isinstance(message_type, str):
+        return jsonify({
+            "success": False,
+            "error": "A valid message_type is required."
+        }), 400
+
+    # 3. Reject unsupported message types.
+    if message_type not in MESSAGE_SCHEMAS:
+        return jsonify({
+            "success": False,
+            "error": "Unsupported message_type."
+        }), 400
+
+    # 4. Check whether the device is registered.
+    device = db.session.get(RoomDevice, device_id)
+
+    if device is None:
+        return jsonify({
+            "success": False,
+            "error": "Device is not registered."
+        }), 404
+
+    # 5. Validate the payload structure and values.
+    payload_error = validate_payload(message_type, payload)
+
+    if payload_error:
+        return jsonify({
+            "success": False,
+            "error": payload_error
+        }), 400
+
+    # TODO: Pass the validated message to the appropriate service.
+    # Do not update occupancy or trigger alerts until validation succeeds.
+
+    return jsonify({
+        "success": True,
+        "message": "Device message validated successfully.",
+        "device_id": device.device_id,
+        "message_type": message_type
+    }), 200
