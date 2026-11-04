@@ -19,7 +19,9 @@ def test_role_crud_and_validation(client):
     assert updated.status_code == 200
     assert updated.json["role_name"] == "ADMIN"
     assert updated.json["description"] is None
-    assert client.put(f"/roles/{role_id}", json={"role_name": "x" * 51}).status_code == 400
+    assert (
+        client.put(f"/roles/{role_id}", json={"role_name": "x" * 51}).status_code == 400
+    )
 
     assert client.delete(f"/roles/{role_id}").json == {"message": "Role deleted"}
 

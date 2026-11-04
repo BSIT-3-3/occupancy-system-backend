@@ -21,7 +21,10 @@ def _validate_role_payload():
     if error:
         return None, error
     if len(data["role_name"]) > 50:
-        return None, (jsonify({"error": "role_name must not exceed 50 characters"}), 400)
+        return None, (
+            jsonify({"error": "role_name must not exceed 50 characters"}),
+            400,
+        )
 
     if "description" in data:
         data["description"], error = validate_optional_string_field(
@@ -53,7 +56,9 @@ def create_role():
         db.session.commit()
         return jsonify(role.to_dict()), 201
     except IntegrityError as error:
-        return _database_failure("role.create", error, conflict_message="Role already exists")
+        return _database_failure(
+            "role.create", error, conflict_message="Role already exists"
+        )
     except SQLAlchemyError as error:
         return _database_failure("role.create", error)
     except (AttributeError, TypeError, ValueError) as error:
@@ -99,7 +104,9 @@ def update_role(role_id):
         db.session.commit()
         return jsonify(role.to_dict())
     except IntegrityError as error:
-        return _database_failure("role.update", error, conflict_message="Role already exists")
+        return _database_failure(
+            "role.update", error, conflict_message="Role already exists"
+        )
     except SQLAlchemyError as error:
         return _database_failure("role.update", error)
     except (AttributeError, TypeError, ValueError) as error:
@@ -116,6 +123,8 @@ def delete_role(role_id):
         db.session.commit()
         return jsonify({"message": "Role deleted"}), 200
     except IntegrityError as error:
-        return _database_failure("role.delete", error, conflict_message="Role is assigned to users")
+        return _database_failure(
+            "role.delete", error, conflict_message="Role is assigned to users"
+        )
     except SQLAlchemyError as error:
         return _database_failure("role.delete", error)

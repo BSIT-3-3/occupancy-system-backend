@@ -113,6 +113,7 @@ def login():
         }
     ), 200
 
+
 @auth_bp.post("/register")
 def register():
     """
@@ -217,9 +218,7 @@ def register():
     for field in ["middle_name", "contact_number"]:
         if field in data and data[field] is not None:
             if not isinstance(data[field], str):
-                return jsonify({
-                    "error": f"{field} must be a string"
-                }), 400
+                return jsonify({"error": f"{field} must be a string"}), 400
 
             data[field] = data[field].strip()
 
@@ -233,14 +232,12 @@ def register():
 
     for field, limit in limits.items():
         if len(data.get(field) or "") > limit:
-            return jsonify({
-                "error": f"{field} must not exceed {limit} characters"
-            }), 400
+            return jsonify(
+                {"error": f"{field} must not exceed {limit} characters"}
+            ), 400
 
     if len(data["password"]) < 8:
-        return jsonify({
-            "error": "Password must be at least 8 characters"
-        }), 400
+        return jsonify({"error": "Password must be at least 8 characters"}), 400
 
     try:
         user, message, status_code = register_user(data)
@@ -248,16 +245,16 @@ def register():
         if message:
             return jsonify({"error": message}), status_code
 
-        return jsonify({
-            "message": "Registration successful",
-            "user": user,
-        }), status_code
+        return jsonify(
+            {
+                "message": "Registration successful",
+                "user": user,
+            }
+        ), status_code
 
     except IntegrityError:
         db.session.rollback()
-        return jsonify({
-            "error": "Username already exists"
-        }), 409
+        return jsonify({"error": "Username already exists"}), 409
     except SQLAlchemyError as error:
         db.session.rollback()
         current_app.logger.error(

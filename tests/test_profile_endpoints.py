@@ -9,7 +9,9 @@ def _create_user(app):
         role = Role(role_name="USER")
         db.session.add(role)
         db.session.flush()
-        user = User(username="profile-user", password="not-a-real-hash", role_id=role.role_id)
+        user = User(
+            username="profile-user", password="not-a-real-hash", role_id=role.role_id
+        )
         db.session.add(user)
         db.session.commit()
         return user.user_id
@@ -46,9 +48,13 @@ def test_profile_create_read_and_update(client, app):
 def test_profile_validation_and_duplicate_conflict(client, app):
     user_id = _create_user(app)
     assert client.post("/user_profiles", json=[]).status_code == 400
-    assert client.post(
-        "/user_profiles", json={"user_id": True, "first_name": "Ada", "last_name": "Lovelace"}
-    ).status_code == 400
+    assert (
+        client.post(
+            "/user_profiles",
+            json={"user_id": True, "first_name": "Ada", "last_name": "Lovelace"},
+        ).status_code
+        == 400
+    )
 
     payload = {"user_id": user_id, "first_name": "Ada", "last_name": "Lovelace"}
     assert client.post("/user_profiles", json=payload).status_code == 201

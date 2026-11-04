@@ -39,7 +39,9 @@ def register_user(data):
             return None, "Default registration role is not configured", 500
 
         full_name = " ".join(
-            filter(None, [data["first_name"], data.get("middle_name"), data["last_name"]])
+            filter(
+                None, [data["first_name"], data.get("middle_name"), data["last_name"]]
+            )
         )
         user = User(
             username=data["username"],
@@ -62,12 +64,16 @@ def register_user(data):
         )
         db.session.commit()
 
-        return {
-            "user_id": user.user_id,
-            "username": user.username,
-            "full_name": user.full_name,
-            "status": user.status,
-        }, None, 201
+        return (
+            {
+                "user_id": user.user_id,
+                "username": user.username,
+                "full_name": user.full_name,
+                "status": user.status,
+            },
+            None,
+            201,
+        )
     except (KeyError, TypeError, ValueError, SQLAlchemyError):
         db.session.rollback()
         raise
@@ -104,7 +110,10 @@ def _validate_user_payload(*, creating):
     if creating or "password" in data:
         password = data.get("password")
         if not isinstance(password, str) or (creating and not password):
-            return None, (jsonify({"error": "password must be a non-empty string"}), 400)
+            return None, (
+                jsonify({"error": "password must be a non-empty string"}),
+                400,
+            )
 
     for field, max_length in (("full_name", 100), ("status", 20)):
         if field in data:
@@ -141,7 +150,9 @@ def create_user():
         db.session.commit()
         return jsonify(user.to_dict()), 201
     except IntegrityError as error:
-        return _database_failure("user.create", error, conflict_message="Username already exists")
+        return _database_failure(
+            "user.create", error, conflict_message="Username already exists"
+        )
     except SQLAlchemyError as error:
         return _database_failure("user.create", error)
     except (AttributeError, TypeError, ValueError) as error:
@@ -197,7 +208,9 @@ def update_user(user_id):
         db.session.commit()
         return jsonify(user.to_dict())
     except IntegrityError as error:
-        return _database_failure("user.update", error, conflict_message="Username already exists")
+        return _database_failure(
+            "user.update", error, conflict_message="Username already exists"
+        )
     except SQLAlchemyError as error:
         return _database_failure("user.update", error)
     except (AttributeError, TypeError, ValueError) as error:
@@ -214,6 +227,8 @@ def delete_user(user_id):
         db.session.commit()
         return jsonify({"message": "User deleted"}), 200
     except IntegrityError as error:
-        return _database_failure("user.delete", error, conflict_message="User cannot be deleted")
+        return _database_failure(
+            "user.delete", error, conflict_message="User cannot be deleted"
+        )
     except SQLAlchemyError as error:
         return _database_failure("user.delete", error)

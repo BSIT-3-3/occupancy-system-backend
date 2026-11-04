@@ -32,7 +32,10 @@ def _validate_profile_payload(*, creating):
         if error:
             return None, error
         if len(data[field]) > 50:
-            return None, (jsonify({"error": f"{field} must not exceed 50 characters"}), 400)
+            return None, (
+                jsonify({"error": f"{field} must not exceed 50 characters"}),
+                400,
+            )
 
     for field, limit in (("middle_name", 50), ("contact_number", 20)):
         if field in data:
@@ -77,7 +80,9 @@ def create_profile():
         return jsonify(profile.to_dict()), 201
     except IntegrityError as error:
         return _database_failure(
-            "profile.create", error, conflict_message="Profile already exists for this user"
+            "profile.create",
+            error,
+            conflict_message="Profile already exists for this user",
         )
     except SQLAlchemyError as error:
         return _database_failure("profile.create", error)
@@ -136,7 +141,9 @@ def update_profile(user_id):
         db.session.commit()
         return jsonify(profile.to_dict())
     except IntegrityError as error:
-        return _database_failure("profile.update", error, conflict_message="Profile cannot be updated")
+        return _database_failure(
+            "profile.update", error, conflict_message="Profile cannot be updated"
+        )
     except SQLAlchemyError as error:
         return _database_failure("profile.update", error)
     except (AttributeError, TypeError, ValueError) as error:

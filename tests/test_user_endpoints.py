@@ -47,17 +47,23 @@ def test_create_and_read_user_never_exposes_password_hash(client, app):
 def test_user_endpoints_validate_json_and_fields(client):
     assert client.post("/users", data="not-json").status_code == 400
     assert client.post("/users", json=[]).status_code == 400
-    assert client.post(
-        "/users", json={"username": "alice", "password": "secret", "role_id": True}
-    ).status_code == 400
-    assert client.post(
-        "/users",
-        json={
-            "username": "a" * 51,
-            "password": "secret",
-            "role_id": 1,
-        },
-    ).status_code == 400
+    assert (
+        client.post(
+            "/users", json={"username": "alice", "password": "secret", "role_id": True}
+        ).status_code
+        == 400
+    )
+    assert (
+        client.post(
+            "/users",
+            json={
+                "username": "a" * 51,
+                "password": "secret",
+                "role_id": 1,
+            },
+        ).status_code
+        == 400
+    )
 
 
 def test_update_and_delete_user_preserve_existing_endpoint_contract(client, app):
@@ -89,7 +95,9 @@ def test_update_and_delete_user_preserve_existing_endpoint_contract(client, app)
     assert client.get(f"/users/{user_id}").status_code == 404
 
 
-def test_user_database_failure_rolls_back_and_hides_exception(client, app, monkeypatch, caplog):
+def test_user_database_failure_rolls_back_and_hides_exception(
+    client, app, monkeypatch, caplog
+):
     with app.app_context():
         role = Role(role_name="USER")
         db.session.add(role)
@@ -150,4 +158,7 @@ def test_registration_creates_user_and_profile_atomically(client, app, monkeypat
 
     monkeypatch.undo()
     with app.app_context():
-        assert db.session.query(User).filter_by(username="failed-registration").count() == 0
+        assert (
+            db.session.query(User).filter_by(username="failed-registration").count()
+            == 0
+        )
