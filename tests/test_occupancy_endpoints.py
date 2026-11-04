@@ -22,10 +22,7 @@ def test_create_occupancy_event(client, occupancy_data):
 
 
 def test_create_event_missing_fields(client):
-    response = client.post(
-        "/api/occupancy/events",
-        json={}
-    )
+    response = client.post("/api/occupancy/events", json={})
 
     assert response.status_code == 400
 

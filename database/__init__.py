@@ -1,4 +1,3 @@
-
 import os
 
 from dotenv import load_dotenv
@@ -32,6 +31,8 @@ def create_app(config_override=None):
     migrate.init_app(app, db)
 
     # Import database models
+    # Register Room Device API
+    from api.device_management.routes import device_bp
     from database.models import (
         assistance_request,  # noqa: F401
         occupancy_event,  # noqa: F401
@@ -42,16 +43,16 @@ def create_app(config_override=None):
         user,  # noqa: F401
     )
 
-    # Register Room Device API
-    from api.device_management.routes import device_bp
     app.register_blueprint(device_bp)
 
     # Register Occupancy Event API
     from api.occupancy.routes import occupancy_bp
+
     app.register_blueprint(occupancy_bp)
 
     # Register Gateway API
     from api.gateway.routes import gateway_bp
+
     app.register_blueprint(gateway_bp)
 
     return app

@@ -1,18 +1,13 @@
 import pytest
 
+from api.authentication.routes import auth_bp
 from database import create_app
 from database.extensions import db
-
-# Import blueprints not registered by create_app()
-from api.authentication.routes import auth_bp
+from database.models.room import Room
+from database.models.room_device import RoomDevice
 from services.authentication.user import users_bp
 from services.authentication.user_profile import profiles_bp
 from services.role.role import roles_bp
-
-# Import models so SQLAlchemy registers all tables
-from database.models.room import Room
-from database.models.room_device import RoomDevice
-from database.models.occupancy_event import OccupancyEvent
 
 
 @pytest.fixture

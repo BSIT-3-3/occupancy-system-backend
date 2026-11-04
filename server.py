@@ -1,13 +1,10 @@
-
 from flasgger import Swagger
 
 import api.authentication.routes as routes_bp
 import services.authentication.user as users_bp
 import services.authentication.user_profile as users_profile_bp
 import services.role.role as role_bp
-
 from database import create_app
-
 
 app = create_app()
 
