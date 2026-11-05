@@ -41,9 +41,7 @@ def test_verify_endpoint_checks_bearer_token(client, unauthenticated_client):
     assert invalid.json == {"error": "Invalid access token"}
 
 
-def test_admin_endpoints_require_a_valid_unexpired_token(
-    app, unauthenticated_client
-):
+def test_admin_endpoints_require_a_valid_unexpired_token(app, unauthenticated_client):
     missing = unauthenticated_client.get("/users")
     assert missing.status_code == 401
     assert missing.json == {"error": "Authentication required"}

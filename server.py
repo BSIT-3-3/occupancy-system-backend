@@ -5,9 +5,11 @@ from cli import register_cli_commands
 from database import create_app
 
 app = create_app()
+
 register_blueprints(app)
 register_cli_commands(app)
 
+# Initialize Swagger
 swagger = Swagger(app)
 
 

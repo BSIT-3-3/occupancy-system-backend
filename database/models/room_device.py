@@ -15,9 +15,7 @@ class RoomDevice(db.Model):
     registered_at = db.Column(db.DateTime(timezone=True), server_default=db.func.now())
 
     __table_args__ = (
-        db.UniqueConstraint(
-            "credential_hash", name="uq_room_device_credential_hash"
-        ),
+        db.UniqueConstraint("credential_hash", name="uq_room_device_credential_hash"),
     )
 
     room = db.relationship("Room", backref="device", uselist=False)
