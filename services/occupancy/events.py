@@ -14,7 +14,6 @@ from services.errors import (
     NotFoundError,
 )
 
-
 def authenticate_device(device_id, credential):
     try:
         device = db.session.get(RoomDevice, device_id)
