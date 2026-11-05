@@ -48,6 +48,7 @@ def create_app(config_override=None):
         for origin in os.getenv("CORS_ALLOWED_ORIGINS", "").split(",")
         if origin.strip()
     ]
+
     if allowed_origins:
         CORS(
             app,
@@ -66,7 +67,5 @@ def create_app(config_override=None):
         room_device,  # noqa: F401
         user,  # noqa: F401
     )
-
-    app.register_blueprint(assistance_bp)
 
     return app
