@@ -8,6 +8,7 @@ from services.errors import (
     ConflictError,
     InactiveAccountError,
     InactiveDeviceError,
+    InactiveRoomError,
     InvalidCredentialsError,
     InvalidDeviceCredentialsError,
     InvalidReferenceError,
@@ -59,6 +60,7 @@ def service_error_response(error):
         InvalidRefreshTokenError: 401,
         InvalidDeviceCredentialsError: 401,
         InactiveDeviceError: 403,
+        InactiveRoomError: 403,
     }
     if not isinstance(error, ServiceError):
         raise TypeError("error must be a ServiceError")

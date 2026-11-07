@@ -42,3 +42,7 @@ class InvalidDeviceCredentialsError(ServiceError):
 
 class InactiveDeviceError(ServiceError):
     pass
+
+
+class InactiveRoomError(ServiceError):
+    pass

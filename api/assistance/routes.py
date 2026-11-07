@@ -52,6 +52,9 @@ def create_assistance_request():
         if room is None:
             return jsonify({"error": "Room not found"}), 400
 
+        if not room.is_active:
+            return jsonify({"error": "Room is inactive"}), 403
+
         if device is None:
             return jsonify({"error": "Device not found"}), 400
 

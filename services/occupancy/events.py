@@ -1,5 +1,6 @@
 import hashlib
 import hmac
+from datetime import UTC, datetime
 
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -10,9 +11,11 @@ from database.models.room_device import RoomDevice
 from services.errors import (
     AssociationError,
     InactiveDeviceError,
+    InactiveRoomError,
     InvalidDeviceCredentialsError,
     NotFoundError,
 )
+
 
 def authenticate_device(device_id, credential):
     try:
@@ -41,7 +44,12 @@ def create_occupancy_event(data, credential):
             raise NotFoundError("Room not found", details={"room_id": data["room_id"]})
         if device.room_id != room.room_id:
             raise AssociationError("The device is not registered to this room")
+        if not room.is_active:
+            raise InactiveRoomError("Room is inactive")
 
+        now = datetime.now(UTC)
+        room.occupancy_status = data["occupancy_status"]
+        room.last_occupancy_update = now
         event = OccupancyEvent(
             room_id=device.room_id,
             device_id=device.device_id,

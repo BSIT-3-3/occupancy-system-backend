@@ -21,3 +21,25 @@ class RoomDevice(db.Model):
     )
 
     room = db.relationship("Room", backref="device", uselist=False)
+
+    def to_dict(self):
+        return {
+            "device_id": self.device_id,
+            "room_id": self.room_id,
+            "device_code": self.device_code,
+            "device_name": self.device_name,
+            "registration_status": self.registration_status,
+            "registered_at": (
+                self.registered_at.isoformat() if self.registered_at else None
+            ),
+            "room": (
+                {
+                    "room_id": self.room.room_id,
+                    "room_number": self.room.room_number,
+                    "room_name": self.room.room_name,
+                    "is_active": self.room.is_active,
+                }
+                if self.room is not None
+                else None
+            ),
+        }

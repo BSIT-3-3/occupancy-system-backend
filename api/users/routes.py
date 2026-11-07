@@ -43,9 +43,9 @@ def _validate_user_payload(*, creating):
         password = data.get("password")
         if not isinstance(password, str) or (creating and not password):
             return None, error_response("password must be a non-empty string", 400)
-        if password and len(password) < 12:
+        if password and len(password) < 8:
             return None, error_response(
-                "Admin passwords must be at least 12 characters", 400
+                "Admin passwords must be at least 8 characters", 400
             )
 
     for field, limit in (("full_name", 100), ("status", 20)):
