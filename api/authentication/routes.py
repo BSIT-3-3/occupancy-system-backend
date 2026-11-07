@@ -1,5 +1,5 @@
 from flask import Blueprint, current_app
-from flask_jwt_extended import create_access_token
+from flask_jwt_extended import get_jwt, get_jwt_identity, jwt_required
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from api.authentication.validation import (
@@ -16,6 +16,12 @@ from api.responses import (
 from api.security import admin_required
 from database.extensions import db
 from services.authentication.auth import authenticate_user
+from services.authentication.tokens import (
+    create_session_token_pair,
+    revoke_all_user_sessions,
+    revoke_session,
+    rotate_refresh_token,
+)
 from services.authentication.user import register_user
 from services.errors import ServiceError
 
@@ -75,13 +81,32 @@ def login():
               example: CorrectHorseBatteryStaple
     responses:
       200:
-        description: Login successful; includes a bearer access token
+        description: Login successful; includes access and refresh bearer tokens
+        schema:
+          type: object
+          properties:
+            access_token:
+              type: string
+            refresh_token:
+              type: string
+            access_token_expires_in:
+              type: integer
+            refresh_token_expires_at:
+              type: string
+              format: date-time
+            session_expires_at:
+              type: string
+              format: date-time
+            user:
+              type: object
       400:
         description: Invalid request or missing credentials
       401:
         description: Invalid username or password
       403:
         description: Account is inactive
+      500:
+        description: Login could not be completed
     """
     data, error = validate_json_request([])
     if error:
@@ -106,13 +131,129 @@ def login():
         )
         return error_response("Database operation failed", 500)
 
-    token = create_access_token(identity=str(user.user_id))
+    try:
+        tokens = create_session_token_pair(user)
+    except SQLAlchemyError as error:
+        db.session.rollback()
+        current_app.logger.error(
+            "Database operation authentication.login failed (%s)",
+            type(error).__name__,
+        )
+        return error_response("Database operation failed", 500)
+
     return success_response(
         {
             "message": "Login successful",
-            "access_token": token,
+            **tokens,
             "user": user.to_dict(),
         }
+    )
+
+
+@auth_bp.post("/refresh")
+@jwt_required(refresh=True)
+def refresh():
+    """Rotate a refresh token and issue a new access/refresh pair.
+    ---
+    tags:
+      - Authentication
+    security:
+      - Bearer: []
+    responses:
+      200:
+        description: Refresh token rotated successfully
+        schema:
+          type: object
+          properties:
+            access_token:
+              type: string
+            refresh_token:
+              type: string
+            access_token_expires_in:
+              type: integer
+            refresh_token_expires_at:
+              type: string
+              format: date-time
+            session_expires_at:
+              type: string
+              format: date-time
+      401:
+        description: Refresh token is invalid, expired, revoked, or reused
+      500:
+        description: Token rotation could not be completed
+    """
+    try:
+        tokens = rotate_refresh_token(get_jwt())
+    except ServiceError as error:
+        return service_error_response(error)
+    except SQLAlchemyError as error:
+        return database_error_response("authentication.refresh", error)
+
+    return success_response({"message": "Token refreshed", **tokens})
+
+
+@auth_bp.post("/logout")
+@admin_required
+def logout():
+    """Revoke the current login session.
+    ---
+    tags:
+      - Authentication
+    security:
+      - Bearer: []
+    responses:
+      200:
+        description: Current session revoked
+      401:
+        description: Access token is missing, invalid, expired, or revoked
+      500:
+        description: Session revocation could not be completed
+    """
+    claims = get_jwt()
+    try:
+        revoke_session(int(claims["sid"]), int(get_jwt_identity()))
+    except (KeyError, TypeError, ValueError):
+        return error_response("Invalid access token", 401)
+    except ServiceError as error:
+        return service_error_response(error)
+    except SQLAlchemyError as error:
+        return database_error_response("authentication.logout", error)
+
+    return success_response({"message": "Logged out"})
+
+
+@auth_bp.post("/logout-all")
+@admin_required
+def logout_all():
+    """Revoke every login session belonging to the current user.
+    ---
+    tags:
+      - Authentication
+    security:
+      - Bearer: []
+    responses:
+      200:
+        description: All sessions revoked
+        schema:
+          type: object
+          properties:
+            revoked_sessions:
+              type: integer
+      401:
+        description: Access token is missing, invalid, expired, or revoked
+      500:
+        description: Session revocation could not be completed
+    """
+    try:
+        user_id = int(get_jwt_identity())
+        revoked_count = revoke_all_user_sessions(user_id)
+    except (TypeError, ValueError):
+        return error_response("Invalid access token", 401)
+    except SQLAlchemyError as error:
+        return database_error_response("authentication.logout_all", error)
+
+    return success_response(
+        {"message": "All sessions logged out", "revoked_sessions": revoked_count}
     )
 
 

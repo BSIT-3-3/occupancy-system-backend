@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 
 from flask_jwt_extended import create_access_token
 from werkzeug.security import generate_password_hash
@@ -6,6 +6,7 @@ from werkzeug.security import generate_password_hash
 from database.extensions import db
 from database.models.role import Role
 from database.models.user import User
+from database.models.user_session import UserSession
 
 
 def test_admin_login_returns_bearer_token(client, unauthenticated_client):
@@ -106,7 +107,17 @@ def test_only_active_admin_accounts_can_login(app, unauthenticated_client):
 
     with app.app_context():
         staff_user = db.session.query(User).filter_by(username="legacy-staff").one()
-        staff_token = create_access_token(identity=str(staff_user.user_id))
+        staff_session = UserSession(
+            user_id=staff_user.user_id,
+            expires_at=datetime.now(UTC) + timedelta(days=30),
+        )
+        db.session.add(staff_session)
+        db.session.flush()
+        staff_token = create_access_token(
+            identity=str(staff_user.user_id),
+            additional_claims={"sid": staff_session.session_id},
+        )
+        db.session.commit()
 
     forbidden = unauthenticated_client.get(
         "/users", headers={"Authorization": f"Bearer {staff_token}"}

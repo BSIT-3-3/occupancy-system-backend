@@ -21,11 +21,11 @@ def register_user(data):
         if username_taken(data["username"]):
             raise ConflictError("Username already exists")
 
-        role = Role.query.filter_by(role_name=PUBLIC_REGISTRATION_ROLE).first()
+        role = Role.query.filter_by(role_name=ADMIN_ROLE_NAME).first()
         if role is None:
             role = Role(
-                role_name=PUBLIC_REGISTRATION_ROLE,
-                description="Registered user",
+                role_name=ADMIN_ROLE_NAME,
+                description="System administrator",
             )
             db.session.add(role)
             db.session.flush()

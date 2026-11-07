@@ -26,6 +26,8 @@ def create_app(config_override=None):
     app.config["SQLALCHEMY_DATABASE_URI"] = database_url
     app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY")
     app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(minutes=15)
+    app.config["JWT_REFRESH_TOKEN_EXPIRES"] = timedelta(days=7)
+    app.config["AUTH_SESSION_MAX_AGE"] = timedelta(days=30)
     app.config["JWT_TOKEN_LOCATION"] = ["headers"]
     app.config["JWT_ALGORITHM"] = "HS256"
     app.config["JWT_DECODE_ALGORITHMS"] = ["HS256"]
@@ -57,15 +59,17 @@ def create_app(config_override=None):
             methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         )
 
-    from api.assistance.routes import assistance_bp
+    from api.assistance.routes import assistance_bp  # noqa: F401
     from database.models import (
         assistance_request,  # noqa: F401
         occupancy_event,  # noqa: F401
         profile,  # noqa: F401
+        refresh_token,  # noqa: F401
         role,  # noqa: F401
         room,  # noqa: F401
         room_device,  # noqa: F401
         user,  # noqa: F401
+        user_session,  # noqa: F401
     )
 
     return app

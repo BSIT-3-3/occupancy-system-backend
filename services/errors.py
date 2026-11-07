@@ -32,6 +32,10 @@ class InactiveAccountError(ServiceError):
     pass
 
 
+class InvalidRefreshTokenError(ServiceError):
+    pass
+
+
 class InvalidDeviceCredentialsError(ServiceError):
     pass
 

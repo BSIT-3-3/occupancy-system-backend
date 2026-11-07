@@ -1,3 +1,5 @@
+from datetime import UTC, datetime, timedelta
+
 import pytest
 from flask_jwt_extended import create_access_token
 from werkzeug.security import generate_password_hash
@@ -8,6 +10,7 @@ from database import create_app
 from database.extensions import db
 from database.models.role import Role
 from database.models.user import User
+from database.models.user_session import UserSession
 
 
 @pytest.fixture
@@ -47,7 +50,17 @@ def app():
 def client(app):
     client = app.test_client()
     with app.app_context():
-        token = create_access_token(identity=str(app.config["TEST_ADMIN_ID"]))
+        session = UserSession(
+            user_id=app.config["TEST_ADMIN_ID"],
+            expires_at=datetime.now(UTC) + timedelta(days=30),
+        )
+        db.session.add(session)
+        db.session.flush()
+        token = create_access_token(
+            identity=str(app.config["TEST_ADMIN_ID"]),
+            additional_claims={"sid": session.session_id},
+        )
+        db.session.commit()
     client.environ_base["HTTP_AUTHORIZATION"] = f"Bearer {token}"
     return client
 

@@ -11,6 +11,7 @@ from services.errors import (
     InvalidCredentialsError,
     InvalidDeviceCredentialsError,
     InvalidReferenceError,
+    InvalidRefreshTokenError,
     NotFoundError,
     ServiceError,
 )
@@ -55,6 +56,7 @@ def service_error_response(error):
         ConfigurationError: 500,
         InvalidCredentialsError: 401,
         InactiveAccountError: 403,
+        InvalidRefreshTokenError: 401,
         InvalidDeviceCredentialsError: 401,
         InactiveDeviceError: 403,
     }
