@@ -180,6 +180,52 @@ def get_devices():
         return database_error_response("device.list", error)
 
 
+@device_management_bp.get("/devices/available-rooms")
+@admin_required
+def get_available_rooms():
+    """List active rooms eligible for device assignment (no device assigned).
+    ---
+    tags:
+      - Device Management
+    security:
+      - Bearer: []
+    responses:
+      200:
+        description: Active rooms without an assigned device, ordered by room number
+        schema:
+          type: array
+          items:
+            type: object
+            properties:
+              room_id:
+                type: integer
+              room_number:
+                type: string
+              room_name:
+                type: string
+              occupancy_status:
+                type: string
+                enum: [AVAILABLE, OCCUPIED]
+              last_occupancy_update:
+                type: string
+                format: date-time
+                x-nullable: true
+              is_active:
+                type: boolean
+      401:
+        description: Authentication required
+      403:
+        description: Administrator access required
+      500:
+        description: Failed to load available rooms
+    """
+    try:
+        rooms = device_service.list_available_rooms()
+        return success_response([room.to_dict() for room in rooms])
+    except SQLAlchemyError as error:
+        return database_error_response("device.available_rooms", error)
+
+
 @device_management_bp.get("/devices/<device_id>")
 @admin_required
 def get_device(device_id):

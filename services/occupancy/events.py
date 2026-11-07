@@ -1,5 +1,3 @@
-import hashlib
-import hmac
 from datetime import UTC, datetime
 
 from sqlalchemy.exc import SQLAlchemyError
@@ -7,32 +5,12 @@ from sqlalchemy.exc import SQLAlchemyError
 from database.extensions import db
 from database.models.occupancy_event import OccupancyEvent
 from database.models.room import Room
-from database.models.room_device import RoomDevice
 from services.errors import (
     AssociationError,
-    InactiveDeviceError,
     InactiveRoomError,
-    InvalidDeviceCredentialsError,
     NotFoundError,
 )
-
-
-def authenticate_device(device_id, credential):
-    try:
-        device = db.session.get(RoomDevice, device_id)
-        if device is None or not device.credential_hash or not credential:
-            raise InvalidDeviceCredentialsError("Invalid device credentials")
-        if not isinstance(credential, str):
-            raise InvalidDeviceCredentialsError("Invalid device credentials")
-        credential_hash = hashlib.sha256(credential.encode("utf-8")).hexdigest()
-        if not hmac.compare_digest(device.credential_hash, credential_hash):
-            raise InvalidDeviceCredentialsError("Invalid device credentials")
-        if (device.registration_status or "").upper() != "REGISTERED":
-            raise InactiveDeviceError("Device is not registered")
-        return device
-    except SQLAlchemyError:
-        db.session.rollback()
-        raise
+from services.security.device_auth import authenticate_device
 
 
 def create_occupancy_event(data, credential):

@@ -158,3 +158,56 @@ def test_inactive_room_rejects_new_assistance_requests(app, unauthenticated_clie
     )
     assert response.status_code == 403
     assert response.json == {"error": "Room is inactive"}
+
+
+
+def test_deactivating_a_room_deactivates_its_assigned_device(client, app):
+    created = client.post("/rooms", json=_room_payload())
+    room_id = created.json["room_id"]
+    registered = client.post(
+        "/devices",
+        json={
+            "device_id": "DEV001",
+            "device_code": "ESP32-001",
+            "room_id": room_id,
+            "device_name": "Room Sensor",
+        },
+    )
+    assert registered.status_code == 201
+
+    deleted = client.delete(f"/rooms/{room_id}")
+    assert deleted.status_code == 200
+
+    with app.app_context():
+        room = db.session.get(Room, room_id)
+        assert room.is_active is False
+        device = db.session.get(RoomDevice, "DEV001")
+        # The device record is preserved (not deleted) and its room link is
+        # kept, but it is deactivated so it cannot remain actively assigned
+        # to an inactive room.
+        assert device is not None
+        assert device.room_id == room_id
+        assert device.registration_status == "DEACTIVATED"
+
+
+def test_patching_room_inactive_deactivates_its_assigned_device(client, app):
+    created = client.post("/rooms", json=_room_payload("201", "Room 201"))
+    room_id = created.json["room_id"]
+    registered = client.post(
+        "/devices",
+        json={
+            "device_id": "DEV201",
+            "device_code": "ESP32-201",
+            "room_id": room_id,
+        },
+    )
+    assert registered.status_code == 201
+
+    patched = client.patch(f"/rooms/{room_id}", json={"is_active": False})
+    assert patched.status_code == 200
+
+    with app.app_context():
+        device = db.session.get(RoomDevice, "DEV201")
+        assert device is not None
+        assert device.room_id == room_id
+        assert device.registration_status == "DEACTIVATED"

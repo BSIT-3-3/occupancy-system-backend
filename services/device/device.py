@@ -14,6 +14,22 @@ def get_device(device_id):
     return db.session.get(RoomDevice, device_id)
 
 
+def list_available_rooms():
+    """Active rooms that do not yet have a device assigned.
+
+    The schema enforces one device per room, so only rooms without any device
+    record are eligible for a new assignment.
+    """
+    assigned_room_ids = db.session.query(RoomDevice.room_id).scalar_subquery()
+    return (
+        db.session.query(Room)
+        .filter(Room.is_active.is_(True))
+        .filter(~Room.room_id.in_(assigned_room_ids))
+        .order_by(Room.room_number, Room.room_id)
+        .all()
+    )
+
+
 def create_device(data):
     try:
         if (

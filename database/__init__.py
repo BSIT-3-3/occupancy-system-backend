@@ -28,6 +28,17 @@ def create_app(config_override=None):
     app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(minutes=15)
     app.config["JWT_REFRESH_TOKEN_EXPIRES"] = timedelta(days=7)
     app.config["AUTH_SESSION_MAX_AGE"] = timedelta(days=30)
+    try:
+        heartbeat_timeout_seconds = int(
+            os.getenv("DEVICE_HEARTBEAT_TIMEOUT_SECONDS", "120")
+        )
+    except ValueError as error:
+        raise RuntimeError(
+            "DEVICE_HEARTBEAT_TIMEOUT_SECONDS must be a positive integer"
+        ) from error
+    if heartbeat_timeout_seconds <= 0:
+        raise RuntimeError("DEVICE_HEARTBEAT_TIMEOUT_SECONDS must be a positive integer")
+    app.config["DEVICE_HEARTBEAT_TIMEOUT_SECONDS"] = heartbeat_timeout_seconds
     app.config["JWT_TOKEN_LOCATION"] = ["headers"]
     app.config["JWT_ALGORITHM"] = "HS256"
     app.config["JWT_DECODE_ALGORITHMS"] = ["HS256"]
@@ -62,6 +73,7 @@ def create_app(config_override=None):
     from api.assistance.routes import assistance_bp  # noqa: F401
     from database.models import (
         assistance_request,  # noqa: F401
+        device_status_log,  # noqa: F401
         occupancy_event,  # noqa: F401
         profile,  # noqa: F401
         refresh_token,  # noqa: F401

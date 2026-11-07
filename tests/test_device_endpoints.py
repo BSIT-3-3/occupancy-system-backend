@@ -260,3 +260,44 @@ def test_device_payload_validation_and_authentication(client, unauthenticated_cl
     assert bad_status.json["error"] == "Invalid registration_status"
 
     assert unauthenticated_client.get("/devices").status_code == 401
+
+
+
+def test_available_rooms_returns_only_active_unassigned_rooms(client):
+    room_assigned = _create_room(client, "101", "Assigned")
+    room_free = _create_room(client, "102", "Free")
+    room_inactive = _create_room(client, "103", "Inactive")
+
+    client.post(
+        "/devices",
+        json=_device_payload("DEV001", "ESP32-001", room_id=room_assigned),
+    )
+    client.delete(f"/rooms/{room_inactive}")
+
+    response = client.get("/devices/available-rooms")
+    assert response.status_code == 200
+    rooms = response.json
+    assert [room["room_number"] for room in rooms] == ["102"]
+    assert all(room["is_active"] is True for room in rooms)
+
+
+def test_releasing_a_room_makes_it_available_again(client):
+    room_a = _create_room(client, "101", "Room A")
+    room_b = _create_room(client, "102", "Room B")
+    client.post(
+        "/devices", json=_device_payload("DEV001", "ESP32-001", room_id=room_a)
+    )
+
+    # Moving the device out of room A makes A available again.
+    moved = client.patch("/devices/DEV001", json={"room_id": room_b})
+    assert moved.status_code == 200
+
+    response = client.get("/devices/available-rooms")
+    assert response.status_code == 200
+    assert [room["room_number"] for room in response.json] == ["101"]
+
+
+def test_available_rooms_requires_admin(unauthenticated_client):
+    assert (
+        unauthenticated_client.get("/devices/available-rooms").status_code == 401
+    )

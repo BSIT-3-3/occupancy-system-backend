@@ -6,6 +6,7 @@ from werkzeug.security import generate_password_hash
 from database.extensions import db
 from database.models.role import Role
 from database.models.user import User
+from services.device.monitoring import reconcile_offline_devices
 from services.errors import ServiceError
 from services.security.device_keys import provision_device_key
 
@@ -77,3 +78,21 @@ def register_cli_commands(app):
             raise click.ClickException("Device key provisioning failed.") from None
 
         click.echo(f"Device key (shown once): {credential}")
+
+    @app.cli.command("reconcile-device-status")
+    def reconcile_device_status():
+        """Mark registered devices offline after their heartbeat timeout."""
+        try:
+            changed = reconcile_offline_devices(
+                current_app.config["DEVICE_HEARTBEAT_TIMEOUT_SECONDS"]
+            )
+        except SQLAlchemyError as error:
+            db.session.rollback()
+            current_app.logger.error(
+                "Device status reconciliation failed (%s)", type(error).__name__
+            )
+            raise click.ClickException(
+                "Device status reconciliation failed. Check application logs."
+            ) from None
+
+        click.echo(f"Marked {changed} device(s) offline.")
