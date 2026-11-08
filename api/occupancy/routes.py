@@ -2,14 +2,16 @@ from flask import Blueprint, current_app, request
 from sqlalchemy.exc import SQLAlchemyError
 
 from api.responses import error_response, service_error_response, success_response
-from database.extensions import db
+from database.extensions import db, limiter
 from services.errors import ServiceError
 from services.occupancy.events import create_occupancy_event as record_occupancy_event
+from services.security.rate_limits import DEVICE, device_key_func
 
 occupancy_bp = Blueprint("occupancy", __name__, url_prefix="/api/occupancy")
 
 
 @occupancy_bp.post("/events")
+@limiter.limit(DEVICE, key_func=device_key_func)
 def create_occupancy_event():
     """
     Record an occupancy event.

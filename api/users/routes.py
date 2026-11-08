@@ -15,8 +15,10 @@ from api.responses import (
     unexpected_error_response,
 )
 from api.security import admin_required
+from database.extensions import limiter
 from services.authentication import user as user_service
 from services.errors import ServiceError
+from services.security.rate_limits import READ, WRITE
 
 users_bp = Blueprint("users", __name__)
 
@@ -61,6 +63,7 @@ def _validate_user_payload(*, creating):
 
 
 @users_bp.post("/users")
+@limiter.limit(WRITE)
 @admin_required
 def create_user():
     data, error = _validate_user_payload(creating=True)
@@ -83,6 +86,7 @@ def create_user():
 
 
 @users_bp.get("/users")
+@limiter.limit(READ)
 @admin_required
 def get_users():
     try:
@@ -95,6 +99,7 @@ def get_users():
 
 
 @users_bp.get("/users/<int:user_id>")
+@limiter.limit(READ)
 @admin_required
 def get_user(user_id):
     try:
@@ -109,6 +114,7 @@ def get_user(user_id):
 
 
 @users_bp.put("/users/<int:user_id>")
+@limiter.limit(WRITE)
 @admin_required
 def update_user(user_id):
     try:
@@ -138,6 +144,7 @@ def update_user(user_id):
 
 
 @users_bp.delete("/users/<int:user_id>")
+@limiter.limit(WRITE)
 @admin_required
 def delete_user(user_id):
     try:

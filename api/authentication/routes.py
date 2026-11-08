@@ -14,7 +14,7 @@ from api.responses import (
     success_response,
 )
 from api.security import admin_required
-from database.extensions import db
+from database.extensions import db, limiter
 from services.authentication.auth import authenticate_user
 from services.authentication.tokens import (
     create_session_token_pair,
@@ -24,11 +24,19 @@ from services.authentication.tokens import (
 )
 from services.authentication.user import register_user
 from services.errors import ServiceError
+from services.security.rate_limits import (
+    AUTH_LOGIN,
+    AUTH_REFRESH,
+    AUTH_REGISTER,
+    READ,
+    WRITE,
+)
 
 auth_bp = Blueprint("authentication", __name__, url_prefix="/api/auth")
 
 
 @auth_bp.get("/verify")
+@limiter.limit(READ)
 @admin_required
 def verify_token():
     """Verify that the bearer token belongs to an active administrator.
@@ -55,6 +63,7 @@ def verify_token():
 
 
 @auth_bp.post("/login")
+@limiter.limit(AUTH_LOGIN)
 def login():
     """
     Authenticate an admin account.
@@ -151,6 +160,7 @@ def login():
 
 
 @auth_bp.post("/refresh")
+@limiter.limit(AUTH_REFRESH)
 @jwt_required(refresh=True)
 def refresh():
     """Rotate a refresh token and issue a new access/refresh pair.
@@ -193,6 +203,7 @@ def refresh():
 
 
 @auth_bp.post("/logout")
+@limiter.limit(WRITE)
 @admin_required
 def logout():
     """Revoke the current login session.
@@ -223,6 +234,7 @@ def logout():
 
 
 @auth_bp.post("/logout-all")
+@limiter.limit(WRITE)
 @admin_required
 def logout_all():
     """Revoke every login session belonging to the current user.
@@ -258,6 +270,7 @@ def logout_all():
 
 
 @auth_bp.post("/register")
+@limiter.limit(AUTH_REGISTER)
 def register():
     """Register a public non-admin user and profile.
     ---

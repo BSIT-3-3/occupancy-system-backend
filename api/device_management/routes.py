@@ -14,8 +14,10 @@ from api.responses import (
     success_response,
 )
 from api.security import admin_required
+from database.extensions import limiter
 from services.device import device as device_service
 from services.errors import ServiceError
+from services.security.rate_limits import READ, WRITE
 
 device_management_bp = Blueprint("device_management", __name__)
 
@@ -122,6 +124,7 @@ def _validate_device_update(*, required_fields=()):
 
 
 @device_management_bp.get("/devices")
+@limiter.limit(READ)
 @admin_required
 def get_devices():
     """List all room devices, including deactivated devices.
@@ -181,6 +184,7 @@ def get_devices():
 
 
 @device_management_bp.get("/devices/available-rooms")
+@limiter.limit(READ)
 @admin_required
 def get_available_rooms():
     """List active rooms eligible for device assignment (no device assigned).
@@ -227,6 +231,7 @@ def get_available_rooms():
 
 
 @device_management_bp.get("/devices/<device_id>")
+@limiter.limit(READ)
 @admin_required
 def get_device(device_id):
     """Get one room device by its identifier.
@@ -260,6 +265,7 @@ def get_device(device_id):
 
 
 @device_management_bp.post("/devices")
+@limiter.limit(WRITE)
 @admin_required
 def create_device():
     """Register a room device. New devices begin as PENDING.
@@ -353,6 +359,7 @@ def _update_device(device_id, *, partial):
 
 
 @device_management_bp.put("/devices/<device_id>")
+@limiter.limit(WRITE)
 @admin_required
 def replace_device(device_id):
     """Replace the editable device fields.
@@ -400,6 +407,7 @@ def replace_device(device_id):
 
 
 @device_management_bp.patch("/devices/<device_id>")
+@limiter.limit(WRITE)
 @admin_required
 def patch_device(device_id):
     """Update selected editable device fields.
@@ -446,6 +454,7 @@ def patch_device(device_id):
 
 
 @device_management_bp.delete("/devices/<device_id>")
+@limiter.limit(WRITE)
 @admin_required
 def delete_device(device_id):
     """Deactivate a room device while preserving occupancy and assistance history.

@@ -3,10 +3,11 @@ from datetime import UTC, datetime
 from flask import Blueprint, jsonify, request
 from sqlalchemy.exc import SQLAlchemyError
 
-from database.extensions import db
+from database.extensions import db, limiter
 from database.models.assistance_request import AssistanceRequest
 from database.models.room import Room
 from database.models.room_device import RoomDevice
+from services.security.rate_limits import ASSISTANCE, READ, WRITE
 
 assistance_bp = Blueprint("assistance", __name__)
 
@@ -28,6 +29,7 @@ def request_to_dict(item):
 
 # CREATE: Receive a new assistance request
 @assistance_bp.post("/assistance-requests")
+@limiter.limit(ASSISTANCE)
 def create_assistance_request():
     data = request.get_json(silent=True)
 
@@ -80,6 +82,7 @@ def create_assistance_request():
 
 # READ ALL: Retrieve assistance requests
 @assistance_bp.get("/assistance-requests")
+@limiter.limit(READ)
 def get_assistance_requests():
     try:
         items = AssistanceRequest.query.order_by(
@@ -93,6 +96,7 @@ def get_assistance_requests():
 
 # READ ONE: Retrieve a specific request
 @assistance_bp.get("/assistance-requests/<int:request_id>")
+@limiter.limit(READ)
 def get_assistance_request(request_id):
     try:
         item = db.session.get(AssistanceRequest, request_id)
@@ -111,6 +115,7 @@ def get_assistance_request(request_id):
 
 # UPDATE: Move an assistance request through its workflow
 @assistance_bp.put("/assistance-requests/<int:request_id>")
+@limiter.limit(WRITE)
 def update_assistance_request(request_id):
     data = request.get_json(silent=True)
 

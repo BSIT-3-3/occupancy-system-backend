@@ -9,6 +9,7 @@ from api.responses import (
     success_response,
 )
 from api.security import admin_required
+from database.extensions import limiter
 from services.device.heartbeat import record_heartbeat
 from services.device.monitoring import (
     get_device_status,
@@ -19,6 +20,7 @@ from services.device.monitoring import (
     serialize_status_history,
 )
 from services.errors import ServiceError
+from services.security.rate_limits import DEVICE, READ, device_key_func
 
 device_monitoring_bp = Blueprint(
     "device_monitoring", __name__, url_prefix="/api/device-monitoring"
@@ -26,6 +28,7 @@ device_monitoring_bp = Blueprint(
 
 
 @device_monitoring_bp.post("/heartbeat")
+@limiter.limit(DEVICE, key_func=device_key_func)
 def receive_heartbeat():
     """Accept a heartbeat from a registered Room Node.
     ---
@@ -105,6 +108,7 @@ def receive_heartbeat():
 
 
 @device_monitoring_bp.get("/summary")
+@limiter.limit(READ)
 @admin_required
 def get_device_monitoring_summary():
     """Get registered device availability counts for the dashboard.
@@ -143,6 +147,7 @@ def get_device_monitoring_summary():
 
 
 @device_monitoring_bp.get("/devices/status")
+@limiter.limit(READ)
 @admin_required
 def get_all_device_statuses():
     """Get availability and last communication for all registered devices.
@@ -167,6 +172,7 @@ def get_all_device_statuses():
 
 
 @device_monitoring_bp.get("/devices/<device_id>/status")
+@limiter.limit(READ)
 @admin_required
 def get_one_device_status(device_id):
     """Get current availability for one device.
@@ -200,6 +206,7 @@ def get_one_device_status(device_id):
 
 
 @device_monitoring_bp.get("/devices/<device_id>/history")
+@limiter.limit(READ)
 @admin_required
 def get_one_device_status_history(device_id):
     """Get recent status transitions for one device.

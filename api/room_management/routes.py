@@ -12,8 +12,10 @@ from api.responses import (
     success_response,
 )
 from api.security import admin_required
+from database.extensions import limiter
 from services.errors import ServiceError
 from services.room import room as room_service
+from services.security.rate_limits import READ, WRITE
 
 room_management_bp = Blueprint("room_management", __name__)
 
@@ -51,6 +53,7 @@ def _validate_room_payload(*, required_fields=()):
 
 
 @room_management_bp.get("/rooms")
+@limiter.limit(READ)
 @admin_required
 def get_rooms():
     """List all rooms, including inactive rooms.
@@ -97,6 +100,7 @@ def get_rooms():
 
 
 @room_management_bp.get("/rooms/<int:room_id>")
+@limiter.limit(READ)
 @admin_required
 def get_room(room_id):
     """Get one room by its ID.
@@ -130,6 +134,7 @@ def get_room(room_id):
 
 
 @room_management_bp.post("/rooms")
+@limiter.limit(WRITE)
 @admin_required
 def create_room():
     """Create a room. New rooms begin as AVAILABLE.
@@ -219,6 +224,7 @@ def _update_room(room_id, *, partial):
 
 
 @room_management_bp.put("/rooms/<int:room_id>")
+@limiter.limit(WRITE)
 @admin_required
 def replace_room(room_id):
     """Replace the editable room fields.
@@ -263,6 +269,7 @@ def replace_room(room_id):
 
 
 @room_management_bp.patch("/rooms/<int:room_id>")
+@limiter.limit(WRITE)
 @admin_required
 def patch_room(room_id):
     """Update selected editable room fields.
@@ -306,6 +313,7 @@ def patch_room(room_id):
 
 
 @room_management_bp.delete("/rooms/<int:room_id>")
+@limiter.limit(WRITE)
 @admin_required
 def delete_room(room_id):
     """Deactivate a room while preserving sensor and occupancy history.

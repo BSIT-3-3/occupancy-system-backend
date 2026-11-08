@@ -20,6 +20,7 @@ def app():
             "TESTING": True,
             "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
             "JWT_SECRET_KEY": "test-only-secret-key-material-at-least-32-characters",
+            "RATELIMIT_ENABLED": False,
         }
     )
     assert app.config["SQLALCHEMY_DATABASE_URI"].startswith("sqlite:")

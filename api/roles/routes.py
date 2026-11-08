@@ -14,8 +14,10 @@ from api.responses import (
     unexpected_error_response,
 )
 from api.security import admin_required
+from database.extensions import limiter
 from services.errors import ServiceError
 from services.role import role as role_service
+from services.security.rate_limits import READ, WRITE
 
 roles_bp = Blueprint("roles", __name__)
 
@@ -42,6 +44,7 @@ def _validate_role_payload():
 
 
 @roles_bp.post("/roles")
+@limiter.limit(WRITE)
 @admin_required
 def create_role():
     data, error = _validate_role_payload()
@@ -63,6 +66,7 @@ def create_role():
 
 
 @roles_bp.get("/roles")
+@limiter.limit(READ)
 @admin_required
 def get_roles():
     try:
@@ -75,6 +79,7 @@ def get_roles():
 
 
 @roles_bp.get("/roles/<int:role_id>")
+@limiter.limit(READ)
 @admin_required
 def get_role(role_id):
     try:
@@ -89,6 +94,7 @@ def get_role(role_id):
 
 
 @roles_bp.put("/roles/<int:role_id>")
+@limiter.limit(WRITE)
 @admin_required
 def update_role(role_id):
     try:
@@ -118,6 +124,7 @@ def update_role(role_id):
 
 
 @roles_bp.delete("/roles/<int:role_id>")
+@limiter.limit(WRITE)
 @admin_required
 def delete_role(role_id):
     try:

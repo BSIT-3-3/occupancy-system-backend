@@ -15,8 +15,10 @@ from api.responses import (
     unexpected_error_response,
 )
 from api.security import admin_required
+from database.extensions import limiter
 from services.authentication import user_profile as profile_service
 from services.errors import ServiceError
+from services.security.rate_limits import READ, WRITE
 
 profiles_bp = Blueprint("user_profiles", __name__)
 
@@ -50,6 +52,7 @@ def _validate_profile_payload(*, creating):
 
 
 @profiles_bp.post("/user_profiles")
+@limiter.limit(WRITE)
 @admin_required
 def create_profile():
     data, error = _validate_profile_payload(creating=True)
@@ -74,6 +77,7 @@ def create_profile():
 
 
 @profiles_bp.get("/user_profiles")
+@limiter.limit(READ)
 @admin_required
 def get_profiles():
     """
@@ -95,6 +99,7 @@ def get_profiles():
 
 
 @profiles_bp.get("/user_profiles/<int:user_id>")
+@limiter.limit(READ)
 @admin_required
 def get_profile(user_id):
     try:
@@ -109,6 +114,7 @@ def get_profile(user_id):
 
 
 @profiles_bp.put("/user_profiles/<int:user_id>")
+@limiter.limit(WRITE)
 @admin_required
 def update_profile(user_id):
     try:
@@ -138,6 +144,7 @@ def update_profile(user_id):
 
 
 @profiles_bp.delete("/user_profiles/<int:user_id>")
+@limiter.limit(WRITE)
 @admin_required
 def delete_profile(user_id):
     try:

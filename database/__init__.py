@@ -6,7 +6,7 @@ from flask import Flask
 from flask_cors import CORS
 from sqlalchemy import URL
 
-from database.extensions import db, jwt, migrate
+from database.extensions import db, jwt, limiter, migrate
 
 
 def create_app(config_override=None):
@@ -39,6 +39,22 @@ def create_app(config_override=None):
     if heartbeat_timeout_seconds <= 0:
         raise RuntimeError("DEVICE_HEARTBEAT_TIMEOUT_SECONDS must be a positive integer")
     app.config["DEVICE_HEARTBEAT_TIMEOUT_SECONDS"] = heartbeat_timeout_seconds
+    app.config["RATELIMIT_STORAGE_URI"] = os.getenv(
+        "RATE_LIMIT_STORAGE_URI", "memory://"
+    )
+    app.config["RATELIMIT_ENABLED"] = (
+        os.getenv("RATELIMIT_ENABLED", "true").strip().lower() == "true"
+    )
+    app.config["RATELIMIT_HEADERS_ENABLED"] = True
+    try:
+        max_content_length = int(os.getenv("MAX_CONTENT_LENGTH", "2097152"))
+    except ValueError as error:
+        raise RuntimeError(
+            "MAX_CONTENT_LENGTH must be a positive integer"
+        ) from error
+    if max_content_length <= 0:
+        raise RuntimeError("MAX_CONTENT_LENGTH must be a positive integer")
+    app.config["MAX_CONTENT_LENGTH"] = max_content_length
     app.config["JWT_TOKEN_LOCATION"] = ["headers"]
     app.config["JWT_ALGORITHM"] = "HS256"
     app.config["JWT_DECODE_ALGORITHMS"] = ["HS256"]
@@ -55,6 +71,17 @@ def create_app(config_override=None):
     db.init_app(app)
     migrate.init_app(app, db)
     jwt.init_app(app)
+    limiter.init_app(app)
+
+    from api.responses import error_response
+
+    @app.errorhandler(413)
+    def _payload_too_large(error):
+        return error_response("Request payload too large", 413)
+
+    @app.errorhandler(429)
+    def _rate_limit_exceeded(error):
+        return error_response("Too many requests. Please try again later.", 429)
 
     allowed_origins = [
         origin.strip()
