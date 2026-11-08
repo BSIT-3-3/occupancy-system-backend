@@ -2,6 +2,7 @@ from flask import Blueprint, current_app, request
 from sqlalchemy.exc import SQLAlchemyError
 
 from api.responses import error_response, success_response
+from api.security import admin_required
 from database.extensions import db
 from database.models.occupancy_event import OccupancyEvent
 from database.models.room import Room
@@ -168,13 +169,28 @@ def create_occupancy_event():
         return error_response("Failed to save occupancy event", 500)
 
 
-# GET: RETRIEVE ALL OCCUPANCY EVENTS
+# GET: RETRIEVE OCCUPANCY EVENT HISTORY
 @occupancy_bp.get("/events")
+@admin_required
 def get_occupancy_events():
+    limit_value = request.args.get("limit", "50")
 
-    events = OccupancyEvent.query.order_by(
-        OccupancyEvent.occupancy_event_id.desc()
-    ).all()
+    try:
+        limit = int(limit_value)
+    except (TypeError, ValueError):
+        return error_response("limit must be an integer", 400)
+
+    if not 1 <= limit <= 100:
+        return error_response("limit must be between 1 and 100", 400)
+
+    events = (
+        OccupancyEvent.query.order_by(
+            OccupancyEvent.occurred_at.desc(),
+            OccupancyEvent.occupancy_event_id.desc(),
+        )
+        .limit(limit)
+        .all()
+    )
 
     return success_response(
         {
@@ -188,7 +204,6 @@ def get_occupancy_events():
 # GET BY ID: RETRIEVE ONE OCCUPANCY EVENT
 @occupancy_bp.get("/events/<int:event_id>")
 def get_occupancy_event(event_id):
-
     event = db.session.get(OccupancyEvent, event_id)
 
     if event is None:
@@ -204,7 +219,6 @@ def get_occupancy_event(event_id):
 # PUT BY ID: UPDATE AN OCCUPANCY EVENT
 @occupancy_bp.put("/events/<int:event_id>")
 def update_occupancy_event(event_id):
-
     event = db.session.get(OccupancyEvent, event_id)
 
     if event is None:
@@ -328,7 +342,6 @@ def update_occupancy_event(event_id):
 # DELETE BY ID: DELETE AN OCCUPANCY EVENT
 @occupancy_bp.delete("/events/<int:event_id>")
 def delete_occupancy_event(event_id):
-
     event = db.session.get(OccupancyEvent, event_id)
 
     if event is None:
