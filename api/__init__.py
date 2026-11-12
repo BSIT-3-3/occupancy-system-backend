@@ -2,6 +2,10 @@ from api.assistance.routes import assistance_bp
 from api.authentication.routes import auth_bp
 from api.device_management.routes import device_management_bp
 from api.device_monitoring.routes import device_monitoring_bp
+from api.emergency_notification.routes import (
+    emergency_broadcast_bp,
+    emergency_broadcast_gateway_bp,
+)
 from api.general.routes import general_bp
 from api.occupancy.routes import occupancy_bp
 from api.profiles.routes import profiles_bp
@@ -19,6 +23,8 @@ def register_blueprints(app):
         room_management_bp,
         device_management_bp,
         device_monitoring_bp,
+        emergency_broadcast_bp,
+        emergency_broadcast_gateway_bp,
         roles_bp,
         occupancy_bp,
         assistance_bp,
