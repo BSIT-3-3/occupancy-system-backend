@@ -101,6 +101,7 @@ def create_app(config_override=None):
     from database.models import (
         assistance_request,  # noqa: F401
         device_status_log,  # noqa: F401
+        emergency_broadcast,  # noqa: F401
         occupancy_event,  # noqa: F401
         profile,  # noqa: F401
         refresh_token,  # noqa: F401
