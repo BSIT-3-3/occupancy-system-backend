@@ -11,6 +11,7 @@ ADMIN or USER. Those accounts must be reviewed before this revision can apply.
 from collections.abc import Sequence
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision: str = "b7d3e1a9c642"
@@ -37,11 +38,15 @@ def upgrade() -> None:
         ("ADMIN", "System administrator"),
         ("USER", "Registered user"),
     ):
-        matching_ids = connection.execute(
-            sa.select(role.c.role_id).where(
-                sa.func.lower(role.c.role_name) == role_name.lower()
+        matching_ids = (
+            connection.execute(
+                sa.select(role.c.role_id).where(
+                    sa.func.lower(role.c.role_name) == role_name.lower()
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         if len(matching_ids) > 1:
             raise RuntimeError(
                 f"Multiple {role_name} role rows exist; reconcile them before migration"
@@ -54,8 +59,7 @@ def upgrade() -> None:
             )
         else:
             connection.execute(
-                sa.insert(role)
-                .values(role_name=role_name, description=description)
+                sa.insert(role).values(role_name=role_name, description=description)
             )
     removable_roles = sa.func.upper(role.c.role_name).not_in(["ADMIN", "USER"])
     non_retained_user_count = connection.execute(
