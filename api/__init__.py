@@ -7,7 +7,6 @@ from api.emergency_notification.routes import (
     emergency_broadcast_gateway_bp,
 )
 from api.general.routes import general_bp
-from api.occupancy.routes import occupancy_bp
 from api.profiles.routes import profiles_bp
 from api.roles.routes import roles_bp
 from api.room_management.routes import room_management_bp
@@ -26,7 +25,5 @@ def register_blueprints(app):
         emergency_broadcast_bp,
         emergency_broadcast_gateway_bp,
         roles_bp,
-        occupancy_bp,
-        assistance_bp,
     ):
         app.register_blueprint(blueprint)
