@@ -21,9 +21,7 @@ def provision_device_key(device_id, *, activate=False):
             device.registration_status = "REGISTERED"
 
         credential = secrets.token_urlsafe(32)
-        device.credential_hash = hashlib.sha256(
-            credential.encode("utf-8")
-        ).hexdigest()
+        device.credential_hash = hashlib.sha256(credential.encode("utf-8")).hexdigest()
         db.session.commit()
         return credential
     except SQLAlchemyError:

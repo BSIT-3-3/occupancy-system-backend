@@ -9,6 +9,7 @@ Create Date: 2026-11-04 00:00:00.000000
 from collections.abc import Sequence
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision: str = "a8c19e2d6f30"
@@ -28,7 +29,5 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_constraint(
-        "uq_room_device_credential_hash", "room_device", type_="unique"
-    )
+    op.drop_constraint("uq_room_device_credential_hash", "room_device", type_="unique")
     op.drop_column("room_device", "credential_hash")

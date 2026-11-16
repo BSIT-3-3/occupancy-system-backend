@@ -178,7 +178,10 @@ def test_public_registration_validates_fields_and_duplicate_username(
         "first_name": "Duplicate",
         "last_name": "User",
     }
-    assert unauthenticated_client.post("/api/auth/register", json=payload).status_code == 201
+    assert (
+        unauthenticated_client.post("/api/auth/register", json=payload).status_code
+        == 201
+    )
     duplicate = unauthenticated_client.post("/api/auth/register", json=payload)
     assert duplicate.status_code == 409
     assert duplicate.json == {"error": "Username already exists"}

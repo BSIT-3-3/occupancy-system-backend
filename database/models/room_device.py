@@ -26,6 +26,7 @@ class RoomDevice(db.Model):
             "current_status IN ('UNKNOWN', 'ONLINE', 'OFFLINE')",
             name="ck_room_device_current_status",
         ),
+
     )
 
     room = db.relationship("Room", backref="device", uselist=False)

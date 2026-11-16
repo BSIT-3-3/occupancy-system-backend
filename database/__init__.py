@@ -58,8 +58,8 @@ def create_app(config_override=None):
     app.config["JWT_TOKEN_LOCATION"] = ["headers"]
     app.config["JWT_ALGORITHM"] = "HS256"
     app.config["JWT_DECODE_ALGORITHMS"] = ["HS256"]
+
     if config_override:
-        # Test configurations are applied before extensions create their engines.
         app.config.update(config_override)
 
     jwt_secret = app.config.get("JWT_SECRET_KEY")
@@ -93,23 +93,24 @@ def create_app(config_override=None):
         CORS(
             app,
             origins=allowed_origins,
-            allow_headers=["Content-Type", "Authorization", "X-Device-Key"],
+            allow_headers=[
+                "Content-Type",
+                "Authorization",
+                "X-Device-Key",
+            ],
             methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         )
 
-    from api.assistance.routes import assistance_bp  # noqa: F401
-    from database.models import (
-        assistance_request,  # noqa: F401
-        device_status_log,  # noqa: F401
-        emergency_broadcast,  # noqa: F401
-        occupancy_event,  # noqa: F401
-        profile,  # noqa: F401
-        refresh_token,  # noqa: F401
-        role,  # noqa: F401
-        room,  # noqa: F401
-        room_device,  # noqa: F401
-        user,  # noqa: F401
-        user_session,  # noqa: F401
-    )
 
-    return app
+    from api.assistance.routes import assistance_bp  # noqa: F401
+
+    from api.assistance.routes import assistance_bp
+    from api.device_management.routes import device_bp
+    from api.gateway.routes import gateway_bp
+    from api.occupancy.routes import occupancy_bp
+
+    app.register_blueprint(assistance_bp)
+    app.register_blueprint(device_bp)
+    app.register_blueprint(occupancy_bp)
+    app.register_blueprint(gateway_bp)
+

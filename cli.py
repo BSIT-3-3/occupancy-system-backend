@@ -25,7 +25,9 @@ def register_cli_commands(app):
 
         try:
             if User.query.filter_by(username=username).first() is not None:
-                raise click.ClickException("An account with that username already exists.")
+                raise click.ClickException(
+                    "An account with that username already exists."
+                )
 
             role = Role.query.filter_by(role_name="ADMIN").first()
             if role is None:

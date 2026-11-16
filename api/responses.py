@@ -64,4 +64,6 @@ def service_error_response(error):
     }
     if not isinstance(error, ServiceError):
         raise TypeError("error must be a ServiceError")
-    return error_response(str(error), status_codes.get(type(error), 500), **error.details)
+    return error_response(
+        str(error), status_codes.get(type(error), 500), **error.details
+    )
